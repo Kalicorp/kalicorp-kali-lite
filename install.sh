@@ -47,6 +47,7 @@ fi
 info "Création du Modelfile Kali-Anima..."
 mkdir -p /etc/kalicorp
 cat > /etc/kalicorp/Modelfile <<'MODEFILE'
+NAME kali-anima
 FROM qwen3:8b
 
 SYSTEM """
