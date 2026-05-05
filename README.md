@@ -47,8 +47,7 @@ GPL-2.0 — redistribution autorisée.
 
 ## Cadre
 
-RGPD, ANSSI, AI Act — confidentiel par architecture.
-
+conçu pour faciliter la conformité RGPD / AI Act
 ---
 
 Kalicorp | Le Sanctuaire, Sissonne | 2026 | app.kalicorp.fr
