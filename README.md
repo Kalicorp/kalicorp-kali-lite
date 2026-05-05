@@ -1,4 +1,4 @@
-# kalicorp-hardening
+# kalicorp-hardening model anima : kali-lite v1
 
 Anima Kalicorp — installation locale en 1 clic.
 
