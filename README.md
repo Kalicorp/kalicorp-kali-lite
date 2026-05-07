@@ -37,12 +37,6 @@ curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/ma
 - WebFetch — récupération et analyse de pages web
 - Mémoire persistante entre sessions via CLAUDE.md
 
-## Compensations cloud
-
-Kalicorp DevCore 35B réalise 92% des tâches en autonomie.
-Inference Kalicorp Le Sanctuaire — DL580 Gen9 4x Xeon E7-8867 V4 72 cœurs / 144 threads.
-Infrastructure : 512 Go RAM + multi GPU — souverain on-premise.
-
 ## Licence
 
 GPL-2.0 — redistribution autorisée.
