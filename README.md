@@ -1,4 +1,4 @@
-# kalicorp-hardening model anima : kali-lite v1
+# kalicorp-hardening — Kali-lite v2
 
 Anima Kalicorp — installation locale en 1 clic.
 
@@ -6,10 +6,11 @@ Assistant IA souverain, zéro cloud, zéro dépendance externe.
 
 ## Architecture
 
-- **Moteur** : qwen3:8b via Ollama
-- **Interface** : Claude Code v2+ — proxy Ollama local
+- **Moteur** : qwen3.5:9b (vision) via Ollama
+- **Interface** : Claude Code v2+ — proxy Ollama API compatible Anthropic
 - **Identité** : gravée dans un Modelfile + CLAUDE.md
 - **Données** : sur site uniquement — aucune extraction
+- **API** : `ANTHROPIC_BASE_URL=http://localhost:11434`
 
 ## Installation
 
@@ -30,6 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/ma
 ## Ce qu'elle fait bien
 
 - Chat direct instantané — < 2s par réponse
+- Vision — analyse d'images via qwen3.5:9b
 - Bash guide — diagnostic, audit, maintenance système
 - Code Python, Bash, YAML, configs système
 - WebFetch — récupération et analyse de pages web
