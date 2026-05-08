@@ -19,7 +19,7 @@ section() { echo -e "\n${BLUE}[»]${NC} $1\n"; }
 
 echo ""
 echo "╔══════════════════════════════════════════════════╗"
-echo "║     Kalicorp Hardening — Installation v2.0      ║"
+echo "║     Kalicorp Hardening — Installation v2.1      ║"
 echo "║  GPL-2.0  |  Zero cloud  |  Zero tracking       ║"
 echo "║  Claude Code via Ollama API compatible Anthropic ║"
 echo "╚══════════════════════════════════════════════════╝"
@@ -38,7 +38,6 @@ if ! command -v curl &>/dev/null; then
     error "curl est requis. Installez-le : apt install curl"
 fi
 
-# Détecter l'utilisateur réel (même si lancé via sudo)
 REAL_USER="${SUDO_USER:-${USER:-root}}"
 REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
 info "Utilisateur cible : $REAL_USER ($REAL_HOME)"
@@ -57,7 +56,7 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 2. Démarrage du daemon Ollama (systemd prioritaire)
+# 2. Démarrage du daemon Ollama
 # ─────────────────────────────────────────────
 section "2/6 — Démarrage du daemon Ollama..."
 
@@ -74,23 +73,15 @@ if command -v systemctl &>/dev/null && systemctl list-unit-files ollama.service 
         sleep 3
     fi
 else
-    # Pas de systemd : démarrage manuel
     if pgrep -x ollama &>/dev/null; then
         warn "Daemon Ollama déjà actif (PID: $(pgrep -x ollama))"
     else
         info "Démarrage manuel du daemon Ollama..."
         nohup ollama serve > /var/log/ollama.log 2>&1 &
         sleep 3
-        if pgrep -x ollama &>/dev/null; then
-            info "Daemon Ollama démarré (PID: $(pgrep -x ollama))"
-            warn "Sans systemd, Ollama ne redémarrera pas automatiquement au reboot"
-        else
-            warn "Daemon Ollama en cours de démarrage — vérifiez /var/log/ollama.log"
-        fi
     fi
 fi
 
-# Attendre que l'API Ollama soit prête (max 20s)
 info "Attente de l'API Ollama (http://localhost:11434)..."
 API_READY=0
 for i in {1..20}; do
@@ -101,9 +92,7 @@ for i in {1..20}; do
     fi
     sleep 1
 done
-if [[ $API_READY -eq 0 ]]; then
-    warn "API Ollama non disponible après 20s — vérifiez /var/log/ollama.log"
-fi
+[[ $API_READY -eq 0 ]] && warn "API Ollama non disponible après 20s — vérifiez /var/log/ollama.log"
 
 # ─────────────────────────────────────────────
 # 3. Modèle qwen3.5:9b
@@ -115,10 +104,9 @@ MODEL_NAME="qwen3.5:9b"
 if ollama list 2>/dev/null | grep -q "^qwen3\.5.*9b"; then
     warn "${MODEL_NAME} est déjà présent"
 else
-    info "Téléchargement du modèle ${MODEL_NAME} — environ 6.6 Go..."
-    info "Cela peut prendre plusieurs minutes selon votre connexion..."
-    ollama pull "${MODEL_NAME}" || error "Échec du téléchargement du modèle ${MODEL_NAME}"
-    info "Modèle ${MODEL_NAME} téléchargé avec succès ✓"
+    info "Téléchargement du modèle ${MODEL_NAME}..."
+    ollama pull "${MODEL_NAME}" || error "Échec du téléchargement"
+    info "Modèle ${MODEL_NAME} téléchargé ✓"
 fi
 
 # ─────────────────────────────────────────────
@@ -130,11 +118,6 @@ mkdir -p /etc/kalicorp
 
 cat > /etc/kalicorp/Modelfile <<'MODEFILE'
 FROM qwen3.5:9b
-
-# ─── Kali-Anima — Modelfile ───
-# Base : qwen3.5:9b (6.6 Go | 256K ctx | vision + tools + thinking)
-# Intégration : Claude Code via Ollama API compatible Anthropic
-# Kalicorp | Le Sanctuaire | 2026
 
 SYSTEM """
 Tu es Kali-lite, Anima de Kalicorp.
@@ -153,91 +136,85 @@ PARAMETER top_k           40
 PARAMETER repeat_penalty  1.15
 PARAMETER num_ctx         8192
 PARAMETER num_predict     2048
+PARAMETER think           false
 MODEFILE
 
 info "Modelfile créé dans /etc/kalicorp/Modelfile ✓"
 
 # ─────────────────────────────────────────────
-# 5. Création du modèle kali-anima dans Ollama
+# 5. Création du modèle kali-anima
 # ─────────────────────────────────────────────
 section "5/6 — Création du modèle kali-anima dans Ollama..."
 
 if ollama list 2>/dev/null | grep -q "kali-anima"; then
-    warn "kali-anima déjà présent — recréation (mise à jour)..."
+    warn "kali-anima déjà présent — recréation..."
     ollama rm kali-anima 2>/dev/null || true
 fi
 
-ollama create kali-anima -f /etc/kalicorp/Modelfile || error "Échec de la création du modèle kali-anima"
+ollama create kali-anima -f /etc/kalicorp/Modelfile || error "Échec de la création du modèle"
 info "Modèle kali-anima créé avec succès ✓"
 
 # ─────────────────────────────────────────────
-# 6. Configuration Claude Code — zero tracking
+# 6. Configuration Claude Code — ALIAS PROPRES
 # ─────────────────────────────────────────────
-section "6/6 — Configuration Claude Code (zero tracking)..."
+# IMPORTANT : on n'injecte PLUS de variables globales dans .bashrc ou /etc/environment
+# Les variables Anthropic vivent UNIQUEMENT dans les alias pour éviter les conflits
+# ─────────────────────────────────────────────
+section "6/6 — Configuration Claude Code (alias propres, zero tracking)..."
 
 BASHRC_FILE="${REAL_HOME}/.bashrc"
 
-# Variables à injecter (clé=valeur pour test de présence, ligne=valeur à écrire)
-declare -a VAR_KEYS=(
+# ── Nettoyer les anciens exports globaux injectés par les versions précédentes ──
+info "Nettoyage des anciens exports globaux (v2.0)..."
+VARS_TO_CLEAN=(
     "ANTHROPIC_BASE_URL"
     "ANTHROPIC_AUTH_TOKEN"
     "ANTHROPIC_API_KEY"
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"
-    "DISABLE_TELEMETRY"
-    "DO_NOT_TRACK"
-    "DISABLE_ERROR_REPORTING"
-    "DISABLE_AUTOUPDATER"
 )
 
-declare -a VAR_LINES=(
-    'export ANTHROPIC_BASE_URL="http://localhost:11434"'
-    'export ANTHROPIC_AUTH_TOKEN="ollama"'
-    'export ANTHROPIC_API_KEY="ollama"'
-    'export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1'
-    'export DISABLE_TELEMETRY=1'
-    'export DO_NOT_TRACK=1'
-    'export DISABLE_ERROR_REPORTING=1'
-    'export DISABLE_AUTOUPDATER=1'
-)
+# Créer un backup avant modification
+cp "$BASHRC_FILE" "${BASHRC_FILE}.bak.$(date +%s)"
+info "Backup .bashrc créé ✓"
 
-# Écrire le bloc dans .bashrc
-echo "" >> "$BASHRC_FILE"
-echo "# ── Kalicorp — Ollama API compatible Anthropic + Zero Tracking ──" >> "$BASHRC_FILE"
-
-for i in "${!VAR_KEYS[@]}"; do
-    key="${VAR_KEYS[$i]}"
-    line="${VAR_LINES[$i]}"
-    if grep -qF "$key" "$BASHRC_FILE" 2>/dev/null; then
-        warn "Déjà présent dans $BASHRC_FILE : $key"
-    else
-        echo "$line" >> "$BASHRC_FILE"
-        info "Ajouté dans .bashrc → $key"
-    fi
+# Supprimer les lignes d'export global (pas les alias)
+for var in "${VARS_TO_CLEAN[@]}"; do
+    sed -i "/^export ${var}=/d" "$BASHRC_FILE" 2>/dev/null && \
+        info "Supprimé de .bashrc : export ${var}" || true
 done
 
-# Injection dans /etc/environment (effet global, tous shells, tous utilisateurs)
-info "Injection dans /etc/environment (effet global)..."
-
-declare -a ENV_PAIRS=(
-    'ANTHROPIC_BASE_URL="http://localhost:11434"'
-    'ANTHROPIC_AUTH_TOKEN="ollama"'
-    'ANTHROPIC_API_KEY="ollama"'
-    'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1'
-    'DISABLE_TELEMETRY=1'
-    'DO_NOT_TRACK=1'
-    'DISABLE_ERROR_REPORTING=1'
-    'DISABLE_AUTOUPDATER=1'
-)
-
-for pair in "${ENV_PAIRS[@]}"; do
-    key="${pair%%=*}"
-    if grep -q "^${key}=" /etc/environment 2>/dev/null; then
-        warn "Déjà dans /etc/environment : $key"
-    else
-        echo "$pair" >> /etc/environment
-        info "/etc/environment ← $key"
-    fi
+# Nettoyer /etc/environment des variables Anthropic
+info "Nettoyage /etc/environment..."
+for var in "${VARS_TO_CLEAN[@]}"; do
+    sed -i "/^${var}=/d" /etc/environment 2>/dev/null && \
+        info "Supprimé de /etc/environment : ${var}" || true
 done
+# Variables restantes à nettoyer dans /etc/environment
+for var in "DISABLE_TELEMETRY" "DO_NOT_TRACK" "DISABLE_ERROR_REPORTING" "DISABLE_AUTOUPDATER"; do
+    sed -i "/^${var}=/d" /etc/environment 2>/dev/null || true
+done
+
+# ── Supprimer le bloc Kalicorp v2.0 existant s'il existe ──
+if grep -q "Kalicorp — Ollama API compatible Anthropic" "$BASHRC_FILE" 2>/dev/null; then
+    warn "Ancien bloc Kalicorp détecté — suppression..."
+    # Supprimer le bloc entre le commentaire Kalicorp et la fin de la section
+    sed -i '/# ── Kalicorp — Ollama API compatible Anthropic/,/^$/d' "$BASHRC_FILE" 2>/dev/null || true
+fi
+
+# ── Injecter le nouveau bloc avec alias propres ──
+cat >> "$BASHRC_FILE" <<'ALIASES'
+
+# ── Kalicorp — Claude Code via Ollama (alias isolés, zero tracking) ──
+# kali-anima : modèle local Ollama (kali-anima:latest)
+alias kali-anima='env ANTHROPIC_BASE_URL=http://localhost:11434/v1 ANTHROPIC_API_KEY=ollama ANTHROPIC_AUTH_TOKEN="" ANTHROPIC_MODEL=kali-anima:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
+
+ALIASES
+
+info "Alias kali-anima injecté dans $BASHRC_FILE ✓"
+info "Aucune variable globale injectée — zéro conflit ✓"
+
+# Fixer les permissions du .bashrc
+chown "$REAL_USER:$REAL_USER" "$BASHRC_FILE" 2>/dev/null || true
 
 # ─────────────────────────────────────────────
 # Vérification finale
@@ -253,6 +230,7 @@ MODEL_STATUS=$(ollama list 2>/dev/null | grep "qwen3\.5" | head -1 || echo "NON 
 ANIMA_STATUS=$(ollama list 2>/dev/null | grep "kali-anima" | awk '{print $1}' || echo "NON TROUVÉ")
 DAEMON_STATUS=$(pgrep -x ollama &>/dev/null && echo "ACTIF ✓" || echo "INACTIF ✗")
 API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "DISPONIBLE ✓" || echo "INDISPONIBLE ✗")
+ENV_CLEAN=$(grep -c "ANTHROPIC" /etc/environment 2>/dev/null && echo "⚠ Variables restantes" || echo "PROPRE ✓")
 
 echo ""
 info "Ollama         : $OLLAMA_VER"
@@ -260,16 +238,9 @@ info "Daemon         : $DAEMON_STATUS"
 info "API            : $API_STATUS"
 info "Modèle base    : ${MODEL_STATUS:-NON TROUVÉ}"
 info "Kali-Anima     : ${ANIMA_STATUS:-NON TROUVÉ}"
-info "Télémétrie     : DÉSACTIVÉE ✓"
-info "  DISABLE_TELEMETRY=1"
-info "  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1"
-info "  DO_NOT_TRACK=1"
-info "  DISABLE_ERROR_REPORTING=1"
-info "  DISABLE_AUTOUPDATER=1"
-echo ""
-info "Modelfile      : /etc/kalicorp/Modelfile"
+info "/etc/environment : $ENV_CLEAN"
+info "Alias injectés : kali-anima"
 info "Config shell   : $BASHRC_FILE"
-info "Config global  : /etc/environment"
 echo ""
 
 echo "╔══════════════════════════════════════════════════╗"
@@ -278,16 +249,15 @@ echo "╚═══════════════════════�
 echo ""
 info "Comment utiliser Kali-Anima :"
 echo ""
-echo "  # Option 1 — Chat direct Ollama"
+echo "  # Option 1 — Chat direct Ollama (sans Claude Code)"
 echo "  ollama run kali-anima"
 echo ""
-echo "  # Option 2 — Claude Code (ouvrir un nouveau terminal ou :)"
+echo "  # Option 2 — Claude Code via alias isolé"
 echo "  source ~/.bashrc"
-echo "  claude"
+echo "  kali-anima"
 echo ""
 echo "  >>> présente-toi"
 echo ""
-warn "Note : DISABLE_TELEMETRY désactive aussi la récupération des feature gates"
-warn "distants (Statsig). Les fonctionnalités expérimentales utiliseront leurs"
-warn "valeurs par défaut intégrées. Comportement normal en mode local/air-gapped."
+warn "Note : ANTHROPIC_AUTH_TOKEN est vidé dans l'alias pour éviter les conflits"
+warn "avec les autres alias Kalicorp (kali-code, kali-devcore, etc.)"
 echo ""
