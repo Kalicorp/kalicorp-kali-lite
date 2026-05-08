@@ -49,6 +49,12 @@ curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/ma
 - WebFetch — récupération et analyse de pages web
 - Mémoire persistante entre sessions via CLAUDE.md
 
+## Démonstration
+
+![Kali-lite v2 — Détection de vulnérabilités](assets/screenshot-sanctuaire.png)
+
+*Kali-lite v2 a détecté des vulnérabilités injectées intentionnellement*
+
 ## Ce que Kali-Lite n'est pas
 
 - pas un SaaS
