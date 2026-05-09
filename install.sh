@@ -347,25 +347,31 @@ PYEOF
     fi
 fi
 
-# ── Construction de l'alias ──
+# ── Injection alias — structure validée MSI Panther (Claude Code 2.1.138) ──
+# Alias écrit directement sans variables intermédiaires pour éviter
+# tout problème de guillemets imbriqués ou d'expansion non voulue.
+
 if [[ $PERSO_FOUND -eq 1 ]]; then
-    ALIAS_ENV="ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama"
-    CONFIG_NOTE="# Config Claude Code personnelle détectée et préservée"
-else
-    ALIAS_ENV="ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_AUTH_TOKEN="
-    CONFIG_NOTE="# Installation propre — aucune config Claude Code personnelle"
-fi
-
-ALIAS_TELEMETRY="CLAUDE_CODE_DISABLE_TELEMETRY=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 ANTHROPIC_MODEL=kali-lite:latest"
-
-cat >> "$SHELL_RC" <<ALIASES
+    # Config perso détectée : on ne vide pas ANTHROPIC_AUTH_TOKEN
+    cat >> "$SHELL_RC" <<'ALIASES'
 
 # ── Kalicorp — Kali-Lite V1 · Alias isolés, zero tracking ──
-${CONFIG_NOTE}
+# Config Claude Code personnelle détectée et préservée
 export CLAUDE_TELEMETRY=false
-alias kali-lite='env ${ALIAS_ENV} ${ALIAS_TELEMETRY} claude --dangerously-skip-permissions'
+alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
 # ── Fin Kalicorp ──
 ALIASES
+else
+    # Installation propre : on vide ANTHROPIC_AUTH_TOKEN pour éviter conflit login
+    cat >> "$SHELL_RC" <<'ALIASES'
+
+# ── Kalicorp — Kali-Lite V1 · Alias isolés, zero tracking ──
+# Installation propre — aucune config Claude Code personnelle
+export CLAUDE_TELEMETRY=false
+alias kali-lite='ANTHROPIC_AUTH_TOKEN="" ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
+# ── Fin Kalicorp ──
+ALIASES
+fi
 
 chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
 ok "Alias kali-lite injecté dans $SHELL_RC"
