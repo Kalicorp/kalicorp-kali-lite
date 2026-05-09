@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
 #  install-kali-lite-v1.sh
-#  Kalicorp · Nœud MSI Field — Autoinstaller
+#  Kalicorp · Nœud MSI Field — Autoinstaller (Linux/macOS)
 #  GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
 #
 #  Stack : Ollama · qwen3:8b · Modelfile Kali-Lite · Claude Code
-#  Machine cible : MSI Panther · Kali Linux · RTX 3080 Laptop 8Go
+#  Supported : Kali/Debian/Ubuntu/Arch (Linux) · macOS (Intel/Apple Silicon)
 #
 #  Usage :
-#    chmod +x install-kali-lite-v1.sh
-#    sudo ./install-kali-lite-v1.sh
+#    curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh | bash
+#    # On Linux, prefix with 'sudo'
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -23,129 +23,51 @@ err()     { echo -e "${RED}[✗]${NC} $*"; exit 1; }
 info()    { echo -e "${CYAN}[→]${NC} $*"; }
 section() { echo -e "\n${BLUE}${BOLD}[»] $*${NC}\n"; }
 
-# ── Bannière ──────────────────────────────────────────────────
-echo -e "${BOLD}"
-echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║   Kalicorp — Kali-Lite V1 · Autoinstaller       ║"
-echo "  ║   GPL-2.0  ·  Zero cloud  ·  Zero tracking      ║"
-echo "  ║   Stack : Ollama · qwen3:8b · Claude Code        ║"
-echo "  ╚══════════════════════════════════════════════════╝"
-echo -e "${NC}"
+# ─────────────────────────────────────────────────────────────
+# SHARED: Bannière
+# ─────────────────────────────────────────────────────────────
+banner() {
+    echo -e "${BOLD}"
+    echo "  ╔══════════════════════════════════════════════════╗"
+    echo "  ║   Kalicorp — Kali-Lite V1 · Autoinstaller       ║"
+    echo "  ║   GPL-2.0  ·  Zero cloud  ·  Zero tracking      ║"
+    echo "  ║   Stack : Ollama · qwen3:8b · Claude Code        ║"
+    echo "  ╚══════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
 
-# ═══════════════════════════════════════════════════════════════
-# PRÉREQUIS
-# ═══════════════════════════════════════════════════════════════
-section "0/6 — Prérequis"
-
-[[ $EUID -ne 0 ]] && err "Lancer avec sudo : sudo ./install-kali-lite-v1.sh"
-command -v curl &>/dev/null || err "curl requis : apt install curl"
-
-REAL_USER="${SUDO_USER:-${USER:-root}}"
-REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
-SHELL_RC="${REAL_HOME}/.bashrc"
-[[ "$SHELL" == *zsh* ]] && SHELL_RC="${REAL_HOME}/.zshrc"
-
-info "Utilisateur : $REAL_USER ($REAL_HOME)"
-info "Shell RC    : $SHELL_RC"
-
-# Détection GPU NVIDIA
-if nvidia-smi &>/dev/null; then
-    GPU=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null)
-    ok "GPU : $GPU"
-else
-    warn "nvidia-smi KO — GPU CUDA non détecté (Ollama tournera en CPU)"
-fi
-
-# Détection config Claude Code perso existante
-PERSO_KEY=""
-PERSO_FOUND=0
-if [[ -f "$SHELL_RC" ]]; then
-    PERSO_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null \
-        | grep -v '=ollama' | head -1 \
-        | sed 's/^export ANTHROPIC_API_KEY=//' | tr -d '"' || true)
-fi
-if [[ -n "$PERSO_KEY" ]]; then
-    PERSO_FOUND=1
-    warn "Config Claude Code personnelle détectée — sera préservée"
-else
-    ok "Aucune config Claude Code personnelle — installation propre"
-fi
-
-# ═══════════════════════════════════════════════════════════════
-# 1. OLLAMA
-# ═══════════════════════════════════════════════════════════════
-section "1/6 — Ollama"
-
-if command -v ollama &>/dev/null; then
-    ok "Ollama présent : $(ollama --version 2>/dev/null)"
-else
-    info "Installation Ollama..."
-    curl -fsSL https://ollama.com/install.sh | sh || err "Installation Ollama échouée"
-    ok "Ollama installé"
-fi
-
-# ═══════════════════════════════════════════════════════════════
-# 2. DAEMON OLLAMA
-# ═══════════════════════════════════════════════════════════════
-section "2/6 — Daemon Ollama"
-
-OLLAMA_LOG="/var/log/kalicorp/ollama.log"
-OLLAMA_PID="/var/run/kalicorp-ollama.pid"
-mkdir -p /var/log/kalicorp
-
-if command -v systemctl &>/dev/null && systemctl list-unit-files ollama.service &>/dev/null 2>&1; then
-    systemctl enable ollama 2>/dev/null || warn "Activation systemd échouée"
-    systemctl start  ollama 2>/dev/null || warn "Démarrage systemd échoué"
-    sleep 2
-    if systemctl is-active --quiet ollama; then
-        ok "Ollama actif via systemd (persistant au reboot)"
-    else
-        warn "Systemd inactif — démarrage manuel..."
-        nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
-        echo $! > "$OLLAMA_PID"
-        ok "Daemon lancé (PID: $!, log: $OLLAMA_LOG)"
-        sleep 3
+# ─────────────────────────────────────────────────────────────
+# SHARED: Détection GPU
+# ─────────────────────────────────────────────────────────────
+detect_gpu() {
+    local os="$1"
+    if [[ "$os" == "Linux" ]]; then
+        if nvidia-smi &>/dev/null; then
+            GPU=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null)
+            ok "GPU : $GPU"
+        else
+            warn "nvidia-smi KO — GPU CUDA non détecté (Ollama tournera en CPU)"
+        fi
+    elif [[ "$os" == "macOS" ]]; then
+        GPU=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | sed 's/.*Chipset Model: //' || echo "N/A")
+        if [[ "$GPU" != "N/A" ]]; then
+            ok "GPU : $GPU"
+        else
+            warn "GPU non détecté — Ollama tournera en CPU"
+        fi
     fi
-else
-    if pgrep -x ollama &>/dev/null; then
-        ok "Daemon Ollama déjà actif (PID: $(pgrep -x ollama))"
-    else
-        info "Démarrage manuel du daemon..."
-        nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
-        echo $! > "$OLLAMA_PID"
-        ok "Daemon lancé (PID: $!, log: $OLLAMA_LOG)"
-        sleep 3
-    fi
-fi
+}
 
-info "Attente API Ollama (http://localhost:11434)..."
-for i in {1..20}; do
-    curl -sf http://localhost:11434/api/tags &>/dev/null && { ok "API disponible (${i}s)"; break; }
-    sleep 1
-    [[ $i -eq 20 ]] && warn "API non disponible après 20s — vérifier /var/log/ollama.log"
-done
+# ─────────────────────────────────────────────────────────────
+# SHARED: Setup Modelfile
+# ─────────────────────────────────────────────────────────────
+setup_modelfile() {
+    section "4/6 — Modelfile Kali-Lite"
 
-# ═══════════════════════════════════════════════════════════════
-# 3. MODÈLE DE BASE : qwen3:8b
-# ═══════════════════════════════════════════════════════════════
-section "3/6 — Modèle qwen3:8b (~5.2 Go)"
+    mkdir -p /etc/kalicorp 2>/dev/null || mkdir -p "$HOME/.kalicorp"
+    MODELFILE_PATH="${MODELFILE_PATH:-/etc/kalicorp/Modelfile.kali-lite}"
 
-if ollama list 2>/dev/null | grep -q "^qwen3.*8b"; then
-    ok "qwen3:8b déjà présent"
-else
-    info "Téléchargement qwen3:8b (peut prendre plusieurs minutes)..."
-    ollama pull qwen3:8b || err "Échec du téléchargement de qwen3:8b"
-    ok "qwen3:8b téléchargé"
-fi
-
-# ═══════════════════════════════════════════════════════════════
-# 4. MODELFILE KALI-LITE
-# ═══════════════════════════════════════════════════════════════
-section "4/6 — Modelfile Kali-Lite"
-
-mkdir -p /etc/kalicorp
-
-cat > /etc/kalicorp/Modelfile.kali-lite <<'MODELFILE_EOF'
+    cat > "$MODELFILE_PATH" <<'MODELFILE_EOF'
 FROM qwen3:8b
 
 TEMPLATE """
@@ -269,74 +191,91 @@ PARAMETER top_k          40
 PARAMETER top_p          0.85
 MODELFILE_EOF
 
-ok "Modelfile écrit dans /etc/kalicorp/Modelfile.kali-lite"
+    ok "Modelfile écrit dans $MODELFILE_PATH"
+}
 
-# ═══════════════════════════════════════════════════════════════
-# 5. CRÉATION DU MODÈLE kali-lite
-# ═══════════════════════════════════════════════════════════════
-section "5/6 — Création modèle kali-lite:latest"
+# ─────────────────────────────────────────────────────────────
+# SHARED: Setup Model
+# ─────────────────────────────────────────────────────────────
+setup_model() {
+    section "3/6 — Modèle qwen3:8b (~5.2 Go)"
 
-if ollama list 2>/dev/null | grep -q "^kali-lite"; then
-    warn "kali-lite déjà présent — recréation..."
-    ollama rm kali-lite 2>/dev/null || true
-fi
-
-ollama create kali-lite -f /etc/kalicorp/Modelfile.kali-lite \
-    || err "Création du modèle kali-lite échouée"
-ok "kali-lite:latest créé"
-
-# Ping rapide
-info "Ping kali-lite..."
-RESP=$(curl -sf http://localhost:11434/api/chat --max-time 30 \
-    -d '{"model":"kali-lite:latest","messages":[{"role":"user","content":"ping"}],"stream":false}' \
-    2>/dev/null || echo "")
-if echo "$RESP" | grep -qi "content\|pong\|kali"; then
-    ok "kali-lite répond"
-else
-    warn "Pas de réponse au ping (modèle peut être encore en chargement)"
-fi
-
-# ═══════════════════════════════════════════════════════════════
-# 6. CLAUDE CODE + ALIAS
-# ═══════════════════════════════════════════════════════════════
-section "6/6 — Claude Code & alias"
-
-# ── Installation Claude Code (npm) ──
-if command -v claude &>/dev/null; then
-    CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
-    ok "Claude Code présent : v${CLAUDE_VER}"
-else
-    if ! command -v npm &>/dev/null; then
-        info "npm absent — installation Node.js LTS..."
-        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
-        apt-get install -y nodejs
+    if ollama list 2>/dev/null | grep -q "^qwen3.*8b"; then
+        ok "qwen3:8b déjà présent"
+    else
+        info "Téléchargement qwen3:8b (peut prendre plusieurs minutes)..."
+        ollama pull qwen3:8b || err "Échec du téléchargement de qwen3:8b"
+        ok "qwen3:8b téléchargé"
     fi
-    info "Installation Claude Code (version figée 2.1.138)..."
-    npm install -g @anthropic-ai/claude-code@2.1.138 || err "Installation Claude Code échouée"
-    CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
-    ok "Claude Code v${CLAUDE_VER} installé"
-fi
 
-# Désactiver télémétrie / auto-update
-claude config set --global telemetry   false 2>/dev/null || true
-claude config set --global autoUpdates false 2>/dev/null || true
-npm config set save-exact true         2>/dev/null || true
-ok "Télémétrie off · Auto-update off"
+    section "5/6 — Création modèle kali-lite:latest"
 
-# ── Nettoyage anciens blocs Kalicorp dans $SHELL_RC ──
-if [[ -f "$SHELL_RC" ]]; then
-    cp "$SHELL_RC" "${SHELL_RC}.bak.$(date +%s)"
-    ok "Backup $SHELL_RC créé"
+    if ollama list 2>/dev/null | grep -q "^kali-lite"; then
+        warn "kali-lite déjà présent — recréation..."
+        ollama rm kali-lite 2>/dev/null || true
+    fi
 
-    # Supprimer exports Kalicorp orphelins
-    sed -i '/^export ANTHROPIC_BASE_URL=.*localhost/d'  "$SHELL_RC" 2>/dev/null || true
-    sed -i '/^export ANTHROPIC_BASE_URL=.*ollama/d'     "$SHELL_RC" 2>/dev/null || true
-    sed -i '/^export ANTHROPIC_API_KEY=ollama$/d'        "$SHELL_RC" 2>/dev/null || true
+    MODELFILE_PATH="${MODELFILE_PATH:-/etc/kalicorp/Modelfile.kali-lite}"
+    ollama create kali-lite -f "$MODELFILE_PATH" || err "Création du modèle kali-lite échouée"
+    ok "kali-lite:latest créé"
 
-    # Supprimer anciens blocs Kalicorp (robuste via python3)
-    if grep -q "# ── Kalicorp" "$SHELL_RC" 2>/dev/null; then
-        warn "Ancien bloc Kalicorp détecté — suppression..."
-        python3 - "$SHELL_RC" <<'PYEOF'
+    info "Ping kali-lite..."
+    RESP=$(curl -sf http://localhost:11434/api/chat --max-time 30 \
+        -d '{"model":"kali-lite:latest","messages":[{"role":"user","content":"ping"}],"stream":false}' \
+        2>/dev/null || echo "")
+    if echo "$RESP" | grep -qi "content\|pong\|kali"; then
+        ok "kali-lite répond"
+    else
+        warn "Pas de réponse au ping (modèle peut être encore en chargement)"
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────
+# SHARED: Setup Claude Code
+# ─────────────────────────────────────────────────────────────
+setup_claude_code() {
+    section "6/6 — Claude Code & alias"
+
+    if command -v claude &>/dev/null; then
+        CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
+        ok "Claude Code présent : v${CLAUDE_VER}"
+    else
+        if ! command -v npm &>/dev/null; then
+            info "npm absent — installation Node.js LTS..."
+            if [[ "$OS_TYPE" == "Linux" ]]; then
+                curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+                apt-get install -y nodejs || err "Installation Node.js échouée"
+            elif [[ "$OS_TYPE" == "macOS" ]]; then
+                brew install node || err "Installation Node.js via Homebrew échouée"
+            fi
+        fi
+        info "Installation Claude Code (version figée 2.1.138)..."
+        npm install -g @anthropic-ai/claude-code@2.1.138 || err "Installation Claude Code échouée"
+        CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
+        ok "Claude Code v${CLAUDE_VER} installé"
+    fi
+
+    claude config set --global telemetry false 2>/dev/null || true
+    claude config set --global autoUpdates false 2>/dev/null || true
+    npm config set save-exact true 2>/dev/null || true
+    ok "Télémétrie off · Auto-update off"
+}
+
+# ─────────────────────────────────────────────────────────────
+# SHARED: Cleanup Shell RC
+# ─────────────────────────────────────────────────────────────
+cleanup_shell_rc() {
+    if [[ -f "$SHELL_RC" ]]; then
+        cp "$SHELL_RC" "${SHELL_RC}.bak.$(date +%s)"
+        ok "Backup $SHELL_RC créé"
+
+        sed -i '/^export ANTHROPIC_BASE_URL=.*localhost/d' "$SHELL_RC" 2>/dev/null || true
+        sed -i '/^export ANTHROPIC_BASE_URL=.*ollama/d' "$SHELL_RC" 2>/dev/null || true
+        sed -i '/^export ANTHROPIC_API_KEY=ollama$/d' "$SHELL_RC" 2>/dev/null || true
+
+        if grep -q "# ── Kalicorp" "$SHELL_RC" 2>/dev/null; then
+            warn "Ancien bloc Kalicorp détecté — suppression..."
+            python3 - "$SHELL_RC" <<'PYEOF'
 import sys, re
 path = sys.argv[1]
 with open(path, 'r') as f:
@@ -352,16 +291,16 @@ with open(path, 'w') as f:
     f.write(cleaned)
 print("[+] Ancien bloc supprimé")
 PYEOF
+        fi
     fi
-fi
+}
 
-# ── Injection alias — structure validée MSI Panther (Claude Code 2.1.138) ──
-# Alias écrit directement sans variables intermédiaires pour éviter
-# tout problème de guillemets imbriqués ou d'expansion non voulue.
-
-if [[ $PERSO_FOUND -eq 1 ]]; then
-    # Config perso détectée : on ne vide pas ANTHROPIC_AUTH_TOKEN
-    cat >> "$SHELL_RC" <<'ALIASES'
+# ─────────────────────────────────────────────────────────────
+# SHARED: Inject Alias
+# ─────────────────────────────────────────────────────────────
+inject_alias() {
+    if [[ $PERSO_FOUND -eq 1 ]]; then
+        cat >> "$SHELL_RC" <<'ALIASES'
 
 # ── Kalicorp — Kali-Lite V1 · Alias isolés, zero tracking ──
 # Config Claude Code personnelle détectée et préservée
@@ -369,9 +308,8 @@ export CLAUDE_TELEMETRY=false
 alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
 # ── Fin Kalicorp ──
 ALIASES
-else
-    # Installation propre : on vide ANTHROPIC_AUTH_TOKEN pour éviter conflit login
-    cat >> "$SHELL_RC" <<'ALIASES'
+    else
+        cat >> "$SHELL_RC" <<'ALIASES'
 
 # ── Kalicorp — Kali-Lite V1 · Alias isolés, zero tracking ──
 # Installation propre — aucune config Claude Code personnelle
@@ -379,41 +317,263 @@ export CLAUDE_TELEMETRY=false
 alias kali-lite='ANTHROPIC_AUTH_TOKEN="" ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
 # ── Fin Kalicorp ──
 ALIASES
-fi
+    fi
 
-chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
-ok "Alias kali-lite injecté dans $SHELL_RC"
+    chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
+    ok "Alias kali-lite injecté dans $SHELL_RC"
+}
 
-# ═══════════════════════════════════════════════════════════════
-# RÉSUMÉ FINAL
-# ═══════════════════════════════════════════════════════════════
-echo ""
-echo -e "${BOLD}  ╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}  ║       Kali-Lite V1 — Installation OK ✓          ║${NC}"
-echo -e "${BOLD}  ╚══════════════════════════════════════════════════╝${NC}"
-echo ""
+# ─────────────────────────────────────────────────────────────
+# SHARED: Print Summary
+# ─────────────────────────────────────────────────────────────
+print_summary() {
+    local os="$1"
+    echo ""
+    echo -e "${BOLD}  ╔══════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}${BOLD}  ║       Kali-Lite V1 — Installation OK ✓          ║${NC}"
+    echo -e "${BOLD}  ╚══════════════════════════════════════════════════╝${NC}"
+    echo ""
 
-GPU_INFO=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo "N/A (CPU mode)")
-OLLAMA_VER=$(ollama --version 2>/dev/null || echo "N/A")
-CLAUDE_VER_F=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "N/A")
-KALI_STATUS=$(ollama list 2>/dev/null | grep "^kali-lite" | awk '{print $1}' || echo "NON TROUVÉ")
-API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "ACTIF ✓" || echo "INACTIF ✗")
+    if [[ "$os" == "Linux" ]]; then
+        GPU_INFO=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo "N/A (CPU mode)")
+        LOGS_PATH="/var/log/kalicorp/ollama.log"
+    else
+        GPU_INFO=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | sed 's/.*Chipset Model: //' || echo "N/A (CPU mode)")
+        LOGS_PATH="$HOME/Library/Logs/kalicorp/ollama.log"
+    fi
 
-echo -e "  GPU       : $GPU_INFO"
-echo -e "  Ollama    : $OLLAMA_VER · API $API_STATUS"
-echo -e "  Claude    : v${CLAUDE_VER_F}"
-echo -e "  Modèle    : ${KALI_STATUS}"
-echo -e "  Modelfile : /etc/kalicorp/Modelfile.kali-lite"
-echo -e "  Log       : /var/log/kalicorp/ollama.log"
-echo -e "  PID       : /var/run/kalicorp-ollama.pid"
-echo -e "  Shell     : $SHELL_RC"
-echo ""
-echo -e "  ${CYAN}Relancer le shell puis :${NC}"
-echo -e "  ${BOLD}source $SHELL_RC${NC}"
-echo -e "  ${BOLD}kali-lite${NC}"
-echo ""
-echo -e "  Ou chat direct Ollama :"
-echo -e "  ${BOLD}ollama run kali-lite${NC}"
-echo ""
+    OLLAMA_VER=$(ollama --version 2>/dev/null || echo "N/A")
+    CLAUDE_VER_F=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "N/A")
+    KALI_STATUS=$(ollama list 2>/dev/null | grep "^kali-lite" | awk '{print $1}' || echo "NON TROUVÉ")
+    API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "ACTIF ✓" || echo "INACTIF ✗")
 
-[[ $PERSO_FOUND -eq 1 ]] && warn "Config Claude Code perso préservée — 'claude' continue sur ton API key"
+    echo -e "  GPU       : $GPU_INFO"
+    echo -e "  Ollama    : $OLLAMA_VER · API $API_STATUS"
+    echo -e "  Claude    : v${CLAUDE_VER_F}"
+    echo -e "  Modèle    : ${KALI_STATUS}"
+    echo -e "  Modelfile : $MODELFILE_PATH"
+    echo -e "  Log       : $LOGS_PATH"
+    echo -e "  Shell     : $SHELL_RC"
+    echo ""
+    echo -e "  ${CYAN}Relancer le shell puis :${NC}"
+    echo -e "  ${BOLD}source $SHELL_RC${NC}"
+    echo -e "  ${BOLD}kali-lite${NC}"
+    echo ""
+    echo -e "  Ou chat direct Ollama :"
+    echo -e "  ${BOLD}ollama run kali-lite${NC}"
+    echo ""
+
+    [[ $PERSO_FOUND -eq 1 ]] && warn "Config Claude Code perso préservée — 'claude' continue sur ton API key"
+}
+
+# ─────────────────────────────────────────────────────────────
+# LINUX: Installation
+# ─────────────────────────────────────────────────────────────
+install_linux() {
+    section "0/6 — Prérequis (Linux)"
+
+    [[ $EUID -ne 0 ]] && err "Lancer avec sudo : sudo bash $0"
+    command -v curl &>/dev/null || err "curl requis : apt install curl"
+
+    REAL_USER="${SUDO_USER:-${USER:-root}}"
+    REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
+    SHELL_RC="${REAL_HOME}/.bashrc"
+    [[ "$SHELL" == *zsh* ]] && SHELL_RC="${REAL_HOME}/.zshrc"
+
+    info "Utilisateur : $REAL_USER ($REAL_HOME)"
+    info "Shell RC    : $SHELL_RC"
+
+    detect_gpu "Linux"
+
+    PERSO_KEY=""
+    PERSO_FOUND=0
+    if [[ -f "$SHELL_RC" ]]; then
+        PERSO_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null \
+            | grep -v '=ollama' | head -1 \
+            | sed 's/^export ANTHROPIC_API_KEY=//' | tr -d '"' || true)
+    fi
+    if [[ -n "$PERSO_KEY" ]]; then
+        PERSO_FOUND=1
+        warn "Config Claude Code personnelle détectée — sera préservée"
+    else
+        ok "Aucune config Claude Code personnelle — installation propre"
+    fi
+
+    section "1/6 — Ollama"
+
+    if command -v ollama &>/dev/null; then
+        ok "Ollama présent : $(ollama --version 2>/dev/null)"
+    else
+        info "Installation Ollama..."
+        curl -fsSL https://ollama.com/install.sh | sh || err "Installation Ollama échouée"
+        ok "Ollama installé"
+    fi
+
+    section "2/6 — Daemon Ollama"
+
+    OLLAMA_LOG="/var/log/kalicorp/ollama.log"
+    OLLAMA_PID="/var/run/kalicorp-ollama.pid"
+    mkdir -p /var/log/kalicorp
+
+    if command -v systemctl &>/dev/null && systemctl list-unit-files ollama.service &>/dev/null 2>&1; then
+        systemctl enable ollama 2>/dev/null || warn "Activation systemd échouée"
+        systemctl start ollama 2>/dev/null || warn "Démarrage systemd échoué"
+        sleep 2
+        if systemctl is-active --quiet ollama; then
+            ok "Ollama actif via systemd (persistant au reboot)"
+        else
+            warn "Systemd inactif — démarrage manuel..."
+            nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+            echo $! > "$OLLAMA_PID"
+            ok "Daemon lancé (PID: $!, log: $OLLAMA_LOG)"
+            sleep 3
+        fi
+    else
+        if pgrep -x ollama &>/dev/null; then
+            ok "Daemon Ollama déjà actif (PID: $(pgrep -x ollama))"
+        else
+            info "Démarrage manuel du daemon..."
+            nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+            echo $! > "$OLLAMA_PID"
+            ok "Daemon lancé (PID: $!, log: $OLLAMA_LOG)"
+            sleep 3
+        fi
+    fi
+
+    info "Attente API Ollama (http://localhost:11434)..."
+    for i in {1..20}; do
+        curl -sf http://localhost:11434/api/tags &>/dev/null && { ok "API disponible (${i}s)"; break; }
+        sleep 1
+        [[ $i -eq 20 ]] && warn "API non disponible après 20s — vérifier $OLLAMA_LOG"
+    done
+
+    MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
+    setup_modelfile
+    setup_model
+    setup_claude_code
+    cleanup_shell_rc
+    inject_alias
+
+    print_summary "Linux"
+}
+
+# ─────────────────────────────────────────────────────────────
+# MACOS: Installation
+# ─────────────────────────────────────────────────────────────
+install_macos() {
+    section "0/6 — Prérequis (macOS)"
+
+    # macOS: NO SUDO CHECK — Homebrew refuses root
+    command -v curl &>/dev/null || err "curl requis — installer depuis App Store ou Xcode"
+
+    REAL_USER="$USER"
+    REAL_HOME="$HOME"
+    SHELL_RC="${REAL_HOME}/.zshrc"
+    [[ -f "${REAL_HOME}/.bashrc" ]] && ! [[ "$SHELL" == *zsh* ]] && SHELL_RC="${REAL_HOME}/.bashrc"
+
+    info "Utilisateur : $REAL_USER ($REAL_HOME)"
+    info "Shell RC    : $SHELL_RC"
+
+    # Check Homebrew
+    if ! command -v brew &>/dev/null; then
+        err "Homebrew requis — installer depuis https://brew.sh"
+    fi
+
+    detect_gpu "macOS"
+
+    PERSO_KEY=""
+    PERSO_FOUND=0
+    if [[ -f "$SHELL_RC" ]]; then
+        PERSO_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null \
+            | grep -v '=ollama' | head -1 \
+            | sed 's/^export ANTHROPIC_API_KEY=//' | tr -d '"' || true)
+    fi
+    if [[ -n "$PERSO_KEY" ]]; then
+        PERSO_FOUND=1
+        warn "Config Claude Code personnelle détectée — sera préservée"
+    else
+        ok "Aucune config Claude Code personnelle — installation propre"
+    fi
+
+    section "1/6 — Ollama"
+
+    if command -v ollama &>/dev/null; then
+        ok "Ollama présent : $(ollama --version 2>/dev/null)"
+    else
+        info "Installation Ollama via Homebrew..."
+        brew install ollama || err "Installation Ollama échouée"
+        ok "Ollama installé"
+    fi
+
+    section "2/6 — Daemon Ollama"
+
+    mkdir -p "$HOME/Library/Logs/kalicorp"
+    OLLAMA_LOG="$HOME/Library/Logs/kalicorp/ollama.log"
+    OLLAMA_PID="$HOME/Library/kalicorp/ollama.pid"
+    mkdir -p "$HOME/Library/kalicorp"
+
+    if brew services list | grep -q "ollama"; then
+        info "Ollama service via Homebrew détecté..."
+        brew services start ollama 2>/dev/null || warn "Démarrage brew services échoué"
+        sleep 2
+        if pgrep -x ollama &>/dev/null; then
+            ok "Ollama actif via brew services"
+        else
+            warn "Brew services inactif — démarrage manuel..."
+            nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+            echo $! > "$OLLAMA_PID"
+            ok "Daemon lancé (PID: $!, log: $OLLAMA_LOG)"
+            sleep 3
+        fi
+    else
+        if pgrep -x ollama &>/dev/null; then
+            ok "Daemon Ollama déjà actif (PID: $(pgrep -x ollama))"
+        else
+            info "Démarrage manuel du daemon..."
+            nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+            echo $! > "$OLLAMA_PID"
+            ok "Daemon lancé (PID: $!, log: $OLLAMA_LOG)"
+            sleep 3
+        fi
+    fi
+
+    info "Attente API Ollama (http://localhost:11434)..."
+    for i in {1..20}; do
+        curl -sf http://localhost:11434/api/tags &>/dev/null && { ok "API disponible (${i}s)"; break; }
+        sleep 1
+        [[ $i -eq 20 ]] && warn "API non disponible après 20s — vérifier $OLLAMA_LOG"
+    done
+
+    MODELFILE_PATH="$HOME/.kalicorp/Modelfile.kali-lite"
+    setup_modelfile
+    setup_model
+    setup_claude_code
+    cleanup_shell_rc
+    inject_alias
+
+    print_summary "macOS"
+}
+
+# ─────────────────────────────────────────────────────────────
+# MAIN: OS Detection & Dispatch
+# ─────────────────────────────────────────────────────────────
+main() {
+    banner
+
+    OS_TYPE=$(uname -s)
+    case "$OS_TYPE" in
+        Linux)
+            OS_TYPE="Linux"
+            install_linux
+            ;;
+        Darwin)
+            OS_TYPE="macOS"
+            install_macos
+            ;;
+        *)
+            err "OS non supporté : $OS_TYPE. Supportés : Linux, macOS"
+            ;;
+    esac
+}
+
+main "$@"
