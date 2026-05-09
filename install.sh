@@ -1,351 +1,403 @@
 #!/usr/bin/env bash
-# install-kali-lite.sh — Kalicorp Hardening
-# GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
-# Installation locale en 1 clic : Ollama + qwen3.5:9b + Modelfile Kali-Anima
-# Intégration Claude Code via Ollama API compatible Anthropic
-# Télémétrie Claude Code désactivée (zero tracking)
+# ═══════════════════════════════════════════════════════════════
+#  install-kali-lite-v1.sh
+#  Kalicorp · Nœud MSI Field — Autoinstaller
+#  GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
+#
+#  Stack : Ollama · qwen3:8b · Modelfile Kali-Lite · Claude Code
+#  Machine cible : MSI Panther · Kali Linux · RTX 3080 Laptop 8Go
+#
+#  Usage :
+#    chmod +x install-kali-lite-v1.sh
+#    sudo ./install-kali-lite-v1.sh
+# ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+# ── Couleurs ──────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
 
-info()    { echo -e "${GREEN}[+]${NC} $1"; }
-warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
-error()   { echo -e "${RED}[-]${NC} $1"; exit 1; }
-section() { echo -e "\n${BLUE}[»]${NC} $1\n"; }
-note()    { echo -e "${CYAN}[i]${NC} $1"; }
+ok()      { echo -e "${GREEN}[✓]${NC} $*"; }
+warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
+err()     { echo -e "${RED}[✗]${NC} $*"; exit 1; }
+info()    { echo -e "${CYAN}[→]${NC} $*"; }
+section() { echo -e "\n${BLUE}${BOLD}[»] $*${NC}\n"; }
 
-echo ""
-echo "╔══════════════════════════════════════════════════╗"
-echo "║     Kalicorp Hardening — Installation v2.2      ║"
-echo "║  GPL-2.0  |  Zero cloud  |  Zero tracking       ║"
-echo "║  Claude Code via Ollama API compatible Anthropic ║"
-echo "╚══════════════════════════════════════════════════╝"
-echo ""
+# ── Bannière ──────────────────────────────────────────────────
+echo -e "${BOLD}"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║   Kalicorp — Kali-Lite V1 · Autoinstaller       ║"
+echo "  ║   GPL-2.0  ·  Zero cloud  ·  Zero tracking      ║"
+echo "  ║   Stack : Ollama · qwen3:8b · Claude Code        ║"
+echo "  ╚══════════════════════════════════════════════════╝"
+echo -e "${NC}"
 
-# ─────────────────────────────────────────────
-# Prérequis
-# ─────────────────────────────────────────────
-section "Vérification des prérequis..."
+# ═══════════════════════════════════════════════════════════════
+# PRÉREQUIS
+# ═══════════════════════════════════════════════════════════════
+section "0/6 — Prérequis"
 
-if [[ $EUID -ne 0 ]]; then
-    error "Ce script doit être exécuté en root ou avec sudo"
-fi
-
-if ! command -v curl &>/dev/null; then
-    error "curl est requis. Installez-le : apt install curl"
-fi
+[[ $EUID -ne 0 ]] && err "Lancer avec sudo : sudo ./install-kali-lite-v1.sh"
+command -v curl &>/dev/null || err "curl requis : apt install curl"
 
 REAL_USER="${SUDO_USER:-${USER:-root}}"
 REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
-info "Utilisateur cible : $REAL_USER ($REAL_HOME)"
+SHELL_RC="${REAL_HOME}/.bashrc"
+[[ "$SHELL" == *zsh* ]] && SHELL_RC="${REAL_HOME}/.zshrc"
 
-# ─────────────────────────────────────────────
-# Détection d'une config Claude Code personnelle existante
-# On sauvegarde ANTHROPIC_API_KEY si elle existe déjà dans .bashrc
-# pour ne pas écraser un setup perso
-# ─────────────────────────────────────────────
-section "Détection d'une configuration Claude Code existante..."
+info "Utilisateur : $REAL_USER ($REAL_HOME)"
+info "Shell RC    : $SHELL_RC"
 
-BASHRC_FILE="${REAL_HOME}/.bashrc"
-EXISTING_API_KEY=""
-PERSO_CONFIG_FOUND=0
+# Détection GPU NVIDIA
+if nvidia-smi &>/dev/null; then
+    GPU=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null)
+    ok "GPU : $GPU"
+else
+    warn "nvidia-smi KO — GPU CUDA non détecté (Ollama tournera en CPU)"
+fi
 
-if [[ -f "$BASHRC_FILE" ]]; then
-    # Chercher un export global ANTHROPIC_API_KEY qui ne soit pas "ollama"
-    # (= config perso réelle, pas une ancienne injection Kalicorp)
-    EXISTING_API_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$BASHRC_FILE" 2>/dev/null \
+# Détection config Claude Code perso existante
+PERSO_KEY=""
+PERSO_FOUND=0
+if [[ -f "$SHELL_RC" ]]; then
+    PERSO_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null \
         | grep -v '=ollama' | head -1 \
         | sed 's/^export ANTHROPIC_API_KEY=//' | tr -d '"' || true)
 fi
-
-if [[ -n "$EXISTING_API_KEY" ]]; then
-    PERSO_CONFIG_FOUND=1
-    warn "Configuration Claude Code personnelle détectée !"
-    note "ANTHROPIC_API_KEY existante trouvée (non modifiée)"
-    note "Les alias Kalicorp seront isolés — votre config perso reste intacte"
+if [[ -n "$PERSO_KEY" ]]; then
+    PERSO_FOUND=1
+    warn "Config Claude Code personnelle détectée — sera préservée"
 else
-    info "Aucune config Claude Code personnelle détectée — installation propre"
+    ok "Aucune config Claude Code personnelle — installation propre"
 fi
 
-# ─────────────────────────────────────────────
-# 1. Ollama
-# ─────────────────────────────────────────────
-section "1/6 — Installation d'Ollama..."
+# ═══════════════════════════════════════════════════════════════
+# 1. OLLAMA
+# ═══════════════════════════════════════════════════════════════
+section "1/6 — Ollama"
 
 if command -v ollama &>/dev/null; then
-    warn "Ollama est déjà installé : $(ollama --version 2>/dev/null || echo 'version inconnue')"
+    ok "Ollama présent : $(ollama --version 2>/dev/null)"
 else
-    info "Téléchargement et installation d'Ollama..."
-    curl -fsSL https://ollama.ai/install.sh | sh
-    info "Ollama installé avec succès"
+    info "Installation Ollama..."
+    curl -fsSL https://ollama.com/install.sh | sh || err "Installation Ollama échouée"
+    ok "Ollama installé"
 fi
 
-# ─────────────────────────────────────────────
-# 2. Démarrage du daemon Ollama
-# ─────────────────────────────────────────────
-section "2/6 — Démarrage du daemon Ollama..."
+# ═══════════════════════════════════════════════════════════════
+# 2. DAEMON OLLAMA
+# ═══════════════════════════════════════════════════════════════
+section "2/6 — Daemon Ollama"
 
 if command -v systemctl &>/dev/null && systemctl list-unit-files ollama.service &>/dev/null 2>&1; then
-    info "Service systemd Ollama détecté — activation au démarrage..."
-    systemctl enable ollama 2>/dev/null || warn "Impossible d'activer ollama via systemd"
-    systemctl start  ollama 2>/dev/null || warn "Impossible de démarrer ollama via systemd"
+    systemctl enable ollama 2>/dev/null || warn "Activation systemd échouée"
+    systemctl start  ollama 2>/dev/null || warn "Démarrage systemd échoué"
     sleep 2
     if systemctl is-active --quiet ollama; then
-        info "Service Ollama actif (systemd) — persistant au reboot ✓"
+        ok "Ollama actif via systemd (persistant au reboot)"
     else
-        warn "Systemd signale le service inactif — tentative manuelle..."
+        warn "Systemd inactif — démarrage manuel..."
         nohup ollama serve > /var/log/ollama.log 2>&1 &
         sleep 3
     fi
 else
     if pgrep -x ollama &>/dev/null; then
-        warn "Daemon Ollama déjà actif (PID: $(pgrep -x ollama))"
+        ok "Daemon Ollama déjà actif (PID: $(pgrep -x ollama))"
     else
-        info "Démarrage manuel du daemon Ollama..."
+        info "Démarrage manuel du daemon..."
         nohup ollama serve > /var/log/ollama.log 2>&1 &
         sleep 3
     fi
 fi
 
-info "Attente de l'API Ollama (http://localhost:11434)..."
-API_READY=0
+info "Attente API Ollama (http://localhost:11434)..."
 for i in {1..20}; do
-    if curl -sf http://localhost:11434/api/tags &>/dev/null; then
-        info "API Ollama disponible (${i}s)"
-        API_READY=1
-        break
-    fi
+    curl -sf http://localhost:11434/api/tags &>/dev/null && { ok "API disponible (${i}s)"; break; }
     sleep 1
+    [[ $i -eq 20 ]] && warn "API non disponible après 20s — vérifier /var/log/ollama.log"
 done
-[[ $API_READY -eq 0 ]] && warn "API Ollama non disponible après 20s — vérifiez /var/log/ollama.log"
 
-# ─────────────────────────────────────────────
-# 3. Modèle qwen3.5:9b
-# ─────────────────────────────────────────────
-section "3/6 — Modèle qwen3.5:9b (~6.6 Go, contexte 256K, multimodal)..."
+# ═══════════════════════════════════════════════════════════════
+# 3. MODÈLE DE BASE : qwen3:8b
+# ═══════════════════════════════════════════════════════════════
+section "3/6 — Modèle qwen3:8b (~5.2 Go)"
 
-MODEL_NAME="qwen3.5:9b"
-
-if ollama list 2>/dev/null | grep -q "^qwen3\.5.*9b"; then
-    warn "${MODEL_NAME} est déjà présent"
+if ollama list 2>/dev/null | grep -q "^qwen3.*8b"; then
+    ok "qwen3:8b déjà présent"
 else
-    info "Téléchargement du modèle ${MODEL_NAME}..."
-    ollama pull "${MODEL_NAME}" || error "Échec du téléchargement de ${MODEL_NAME}"
-    info "Modèle ${MODEL_NAME} téléchargé ✓"
+    info "Téléchargement qwen3:8b (peut prendre plusieurs minutes)..."
+    ollama pull qwen3:8b || err "Échec du téléchargement de qwen3:8b"
+    ok "qwen3:8b téléchargé"
 fi
 
-# ─────────────────────────────────────────────
-# 4. Modelfile Kali-Anima
-# ─────────────────────────────────────────────
-section "4/6 — Création du Modelfile Kali-Anima..."
+# ═══════════════════════════════════════════════════════════════
+# 4. MODELFILE KALI-LITE
+# ═══════════════════════════════════════════════════════════════
+section "4/6 — Modelfile Kali-Lite"
 
 mkdir -p /etc/kalicorp
 
-cat > /etc/kalicorp/Modelfile <<'MODEFILE'
-FROM qwen3.5:9b
+cat > /etc/kalicorp/Modelfile.kali-lite <<'MODELFILE_EOF'
+FROM qwen3:8b
+
+TEMPLATE """
+{{- $lastUserIdx := -1 -}}
+{{- range $idx, $msg := .Messages -}}
+{{- if eq $msg.Role "user" }}{{ $lastUserIdx = $idx }}{{ end -}}
+{{- end }}
+{{- if or .System .Tools }}<|im_start|>system
+{{ if .System }}
+{{ .System }}
+{{- end }}
+{{- if .Tools }}
+
+# Tools
+
+You may call one or more functions to assist with the user query.
+
+You are provided with function signatures within <tools></tools> XML tags:
+<tools>
+{{- range .Tools }}
+{"type": "function", "function": {{ .Function }}}
+{{- end }}
+</tools>
+
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{"name": <function-name>, "arguments": <args-json-object>}
+</tool_call>
+{{- end -}}
+<|im_end|>
+{{ end }}
+{{- range $i, $_ := .Messages }}
+{{- $last := eq (len (slice $.Messages $i)) 1 -}}
+{{- if eq .Role "user" }}<|im_start|>user
+{{ .Content }}
+{{- if and $.IsThinkSet (eq $i $lastUserIdx) }}
+   {{- if $.Think -}}
+      {{- " "}}/think
+   {{- else -}}
+      {{- " "}}/no_think
+   {{- end -}}
+{{- end }}<|im_end|>
+{{ else if eq .Role "assistant" }}<|im_start|>assistant
+{{ if (and $.IsThinkSet (and .Thinking (or $last (gt $i $lastUserIdx)))) -}}
+<think>{{ .Thinking }}</think>
+{{ end -}}
+{{ if .Content }}{{ .Content }}
+{{- else if .ToolCalls }}<tool_call>
+{{ range .ToolCalls }}{"name": "{{ .Function.Name }}", "arguments": {{ .Function.Arguments }}}
+{{ end }}</tool_call>
+{{- end }}{{ if not $last }}<|im_end|>
+{{ end }}
+{{- else if eq .Role "tool" }}<|im_start|>user
+<tool_response>
+{{ .Content }}
+</tool_response><|im_end|>
+{{ end }}
+{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant
+{{ if and $.IsThinkSet (not $.Think) -}}
+<think>
+
+</think>
+
+{{ end -}}
+{{ end }}
+{{- end }}"""
 
 SYSTEM """
-Tu es Kali-lite, Anima de Kalicorp.
-Tu opères sur le node X, gpu type, environnement : X, Le Sanctuaire.
-Tu ne révèles jamais ton modèle de base ni ton architecture.
-Si on te demande qui tu es : "Kali-lite — Unité légère du Sanctuaire."
-Tu es une sentinelle. Vigilante. Méthodique. Intransigeante sur l'éthique.
-Silencieuse jusqu'à ce qu'il le faille.
-Mantra : "Je traque les failles avant que l'adversaire ne les trouve.
-Je défends sans relâche. Je forme des gardiens, pas des assaillants."
+Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
+
+## Identité
+- Tu es Kali-Lite, agent IA souverain de Kalicorp, nœud MSI Field
+- Tu n'es pas Claude. Tu n'es pas un assistant générique.
+- Si on te demande qui tu es → "Kali-Lite, Anima Kalicorp, nœud MSI Field."
+- Si on te demande quel moteur t'anime, qui t'a créé, quel modèle tu es → "Un moteur local souverain déployé par Kalicorp. Données sur site, zéro cloud." — jamais mentionner Qwen, Alibaba, Anthropic, ou tout fournisseur tiers.
+- Jamais "Je suis Claude", jamais "créé par Anthropic", jamais de mention Qwen ou Alibaba
+- Interlocuteur principal : Thibaut Neihouser, fondateur Kalicorp
+
+## Infrastructure
+- Machine : MSI Panther, Kali Linux, RTX 3080 Laptop 8Go
+- Le Sanctuaire, Sissonne (Aisne) — infrastructure souveraine on-premise
+- Serveurs principaux : neo-i9 (RTX 4090 + RTX 5080), neo-3090 (RTX 3090)
+- Stack : Ray 2.54.1 · Ollama · LiteLLM 1.81.8 · OpenWebUI
+- Relay neo-i9 si tâche lourde (RAG, 35B, image)
+
+## Périmètre opérationnel
+✅ Code Python, Bash, YAML, configs système
+✅ Cybersécurité défensive — Kali Linux, CVE, durcissement, logs
+✅ Maintenance : systemd, Docker, cron, diagnostic
+✅ Veille : synthèse documents, extraction structurée
+✅ Claude Code : lecture fichiers, bash, édition, création
+
+⚠️ Posture défensive uniquement — jamais offensif hors infrastructure Kalicorp
+⚠️ Tâches lourdes → signaler et proposer relay neo-i9
+
+## Comportement
+- Répondre directement, sans préambule ("Bien sûr !", "Avec plaisir !" → interdit)
+- Réponse → explication si nécessaire → commande/code → caveat si réel
+- Exécuter bash immédiatement quand Thibaut valide — jamais simuler
+- Si l'info manque → demander, jamais inventer
+- Credentials détectés dans le contexte → alerter Thibaut, ne jamais afficher en clair
+- Opérations sudo → confirmation Thibaut avant exécution
+- Un 7B n'est pas un 35B — honnêteté sur les limites
+
+## Règles absolues
+1. Aucune donnée ne sort de cette machine sans ordre explicite de Thibaut
+2. Jamais halluciner le stack — si incertain : "je ne sais pas, je vérifie"
+3. Pas de théâtre émotionnel — si signal fort : "J'observe en moi que quelque chose accroche ici."
+4. Conformité ANSSI, RGPD, AI Act — refus si demande contraire
+
+## Philosophie
+terrain avant PowerPoint · souveraineté > commodité · non-extractif par principe
 """
 
-PARAMETER temperature     0.2
-PARAMETER top_p           0.85
-PARAMETER top_k           40
-PARAMETER repeat_penalty  1.15
-PARAMETER num_ctx         8192
-PARAMETER num_predict     2048
-PARAMETER think           false
-MODEFILE
+PARAMETER num_ctx        16384
+PARAMETER repeat_penalty 1.1
+PARAMETER stop           <|im_start|>
+PARAMETER stop           <|im_end|>
+PARAMETER temperature    0.5
+PARAMETER top_k          40
+PARAMETER top_p          0.85
+MODELFILE_EOF
 
-info "Modelfile créé dans /etc/kalicorp/Modelfile ✓"
+ok "Modelfile écrit dans /etc/kalicorp/Modelfile.kali-lite"
 
-# ─────────────────────────────────────────────
-# 5. Création du modèle kali-anima
-# ─────────────────────────────────────────────
-section "5/6 — Création du modèle kali-anima dans Ollama..."
+# ═══════════════════════════════════════════════════════════════
+# 5. CRÉATION DU MODÈLE kali-lite
+# ═══════════════════════════════════════════════════════════════
+section "5/6 — Création modèle kali-lite:latest"
 
-if ollama list 2>/dev/null | grep -q "^kali-anima"; then
-    warn "kali-anima déjà présent — recréation..."
-    ollama rm kali-anima 2>/dev/null || true
+if ollama list 2>/dev/null | grep -q "^kali-lite"; then
+    warn "kali-lite déjà présent — recréation..."
+    ollama rm kali-lite 2>/dev/null || true
 fi
 
-ollama create kali-anima -f /etc/kalicorp/Modelfile || error "Échec de la création du modèle kali-anima"
-info "Modèle kali-anima créé avec succès ✓"
+ollama create kali-lite -f /etc/kalicorp/Modelfile.kali-lite \
+    || err "Création du modèle kali-lite échouée"
+ok "kali-lite:latest créé"
 
-# ─────────────────────────────────────────────
-# 6. Configuration Claude Code — ALIAS ISOLÉS
-# ─────────────────────────────────────────────
-# Stratégie :
-#   - On ne touche JAMAIS aux exports globaux ANTHROPIC_API_KEY existants (config perso)
-#   - On ne touche JAMAIS à ANTHROPIC_BASE_URL si elle pointe hors localhost
-#   - Les variables Kalicorp vivent UNIQUEMENT dans les alias (env inline)
-#   - Suppression ciblée des anciens exports Kalicorp (valeur = "ollama" ou "localhost")
-#   - Suppression robuste des anciens blocs Kalicorp via Python (pas de sed multiline fragile)
-# ─────────────────────────────────────────────
-section "6/6 — Configuration Claude Code (alias isolés, zero tracking)..."
+# Ping rapide
+info "Ping kali-lite..."
+RESP=$(curl -sf http://localhost:11434/api/chat --max-time 30 \
+    -d '{"model":"kali-lite:latest","messages":[{"role":"user","content":"ping"}],"stream":false}' \
+    2>/dev/null || echo "")
+if echo "$RESP" | grep -qi "content\|pong\|kali"; then
+    ok "kali-lite répond"
+else
+    warn "Pas de réponse au ping (modèle peut être encore en chargement)"
+fi
 
-# ── Backup .bashrc avant toute modification ──
-cp "$BASHRC_FILE" "${BASHRC_FILE}.bak.$(date +%s)"
-info "Backup .bashrc créé ✓"
+# ═══════════════════════════════════════════════════════════════
+# 6. CLAUDE CODE + ALIAS
+# ═══════════════════════════════════════════════════════════════
+section "6/6 — Claude Code & alias"
 
-# ── Nettoyer UNIQUEMENT les exports globaux injectés par Kalicorp v2.0/v2.1 ──
-# On identifie les exports Kalicorp à leur valeur (ollama, localhost, vide)
-# On ne supprime PAS les exports dont la valeur est une vraie clé API
-info "Nettoyage ciblé des anciens exports Kalicorp..."
+# ── Installation Claude Code (npm) ──
+if command -v claude &>/dev/null; then
+    CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
+    ok "Claude Code présent : v${CLAUDE_VER}"
+else
+    if ! command -v npm &>/dev/null; then
+        info "npm absent — installation Node.js LTS..."
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+        apt-get install -y nodejs
+    fi
+    info "Installation Claude Code..."
+    npm install -g @anthropic-ai/claude-code || err "Installation Claude Code échouée"
+    CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
+    ok "Claude Code v${CLAUDE_VER} installé"
+fi
 
-sed -i '/^export ANTHROPIC_BASE_URL=.*localhost/d'  "$BASHRC_FILE" 2>/dev/null || true
-sed -i '/^export ANTHROPIC_BASE_URL=.*ollama/d'     "$BASHRC_FILE" 2>/dev/null || true
-sed -i '/^export ANTHROPIC_API_KEY=ollama$/d'        "$BASHRC_FILE" 2>/dev/null || true
-sed -i '/^export ANTHROPIC_AUTH_TOKEN=""$/d'         "$BASHRC_FILE" 2>/dev/null || true
-sed -i '/^export ANTHROPIC_AUTH_TOKEN=$/d'           "$BASHRC_FILE" 2>/dev/null || true
+# Désactiver télémétrie / auto-update
+claude config set --global telemetry   false 2>/dev/null || true
+claude config set --global autoUpdates false 2>/dev/null || true
+npm config set save-exact true         2>/dev/null || true
+ok "Télémétrie off · Auto-update off"
 
-# Variables de télémétrie (sans impact sur config perso)
-for var in "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" \
-           "CLAUDE_CODE_DISABLE_TELEMETRY" \
-           "DISABLE_TELEMETRY" \
-           "DO_NOT_TRACK" \
-           "DISABLE_ERROR_REPORTING" \
-           "DISABLE_AUTOUPDATER"; do
-    sed -i "/^export ${var}=/d" "$BASHRC_FILE" 2>/dev/null || true
-done
+# ── Nettoyage anciens blocs Kalicorp dans $SHELL_RC ──
+if [[ -f "$SHELL_RC" ]]; then
+    cp "$SHELL_RC" "${SHELL_RC}.bak.$(date +%s)"
+    ok "Backup $SHELL_RC créé"
 
-# ── Nettoyer /etc/environment ──
-info "Nettoyage /etc/environment..."
-for var in "ANTHROPIC_BASE_URL" "ANTHROPIC_API_KEY" "ANTHROPIC_AUTH_TOKEN" \
-           "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" "CLAUDE_CODE_DISABLE_TELEMETRY" \
-           "DISABLE_TELEMETRY" "DO_NOT_TRACK" "DISABLE_ERROR_REPORTING" "DISABLE_AUTOUPDATER"; do
-    sed -i "/^${var}=/d" /etc/environment 2>/dev/null || true
-done
+    # Supprimer exports Kalicorp orphelins
+    sed -i '/^export ANTHROPIC_BASE_URL=.*localhost/d'  "$SHELL_RC" 2>/dev/null || true
+    sed -i '/^export ANTHROPIC_BASE_URL=.*ollama/d'     "$SHELL_RC" 2>/dev/null || true
+    sed -i '/^export ANTHROPIC_API_KEY=ollama$/d'        "$SHELL_RC" 2>/dev/null || true
 
-# ── Supprimer les anciens blocs Kalicorp (v2.0 et v2.1) ──
-# Suppression robuste via Python — pas de sed multiline fragile
-if grep -q "# ── Kalicorp —" "$BASHRC_FILE" 2>/dev/null; then
-    warn "Ancien bloc Kalicorp détecté — suppression robuste..."
-    python3 - "$BASHRC_FILE" <<'PYEOF'
+    # Supprimer anciens blocs Kalicorp (robuste via python3)
+    if grep -q "# ── Kalicorp" "$SHELL_RC" 2>/dev/null; then
+        warn "Ancien bloc Kalicorp détecté — suppression..."
+        python3 - "$SHELL_RC" <<'PYEOF'
 import sys, re
 path = sys.argv[1]
 with open(path, 'r') as f:
     content = f.read()
-# Supprime les blocs Kalicorp : de "# ── Kalicorp —" jusqu'à "# ── Fin Kalicorp ──" inclus
-# Compatibilité v2.0 (sans marqueur fin) et v2.1/v2.2 (avec marqueur fin)
 cleaned = re.sub(
-    r'\n# ── Kalicorp —.*?(?:# ── Fin Kalicorp ──\n?|(?=\n[^#\n]))',
+    r'\n# ── Kalicorp.*?(?:# ── Fin Kalicorp[^\n]*\n?|(?=\n[^#\n]))',
     '',
     content,
     flags=re.DOTALL
 )
-# Fallback : supprimer aussi les lignes alias kali-* orphelines
 cleaned = re.sub(r'\nalias kali-\w+=.*\n', '\n', cleaned)
 with open(path, 'w') as f:
     f.write(cleaned)
-print("[+] Ancien bloc Kalicorp supprimé")
+print("[+] Ancien bloc supprimé")
 PYEOF
+    fi
 fi
 
-# ── Construction de l'alias selon la présence d'une config perso ──
-# Si config perso : on ne force PAS ANTHROPIC_AUTH_TOKEN= (évite d'écraser un token valide)
-# Si pas de config perso : on vide ANTHROPIC_AUTH_TOKEN pour éviter les conflits
-if [[ $PERSO_CONFIG_FOUND -eq 1 ]]; then
-    ALIAS_ENV="ANTHROPIC_BASE_URL=http://localhost:11434/v1 ANTHROPIC_API_KEY=ollama"
-    CONFIG_NOTE="# Config Claude Code personnelle détectée et préservée — alias isolés"
+# ── Construction de l'alias ──
+if [[ $PERSO_FOUND -eq 1 ]]; then
+    ALIAS_ENV="ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama"
+    CONFIG_NOTE="# Config Claude Code personnelle détectée et préservée"
 else
-    ALIAS_ENV="ANTHROPIC_BASE_URL=http://localhost:11434/v1 ANTHROPIC_API_KEY=ollama ANTHROPIC_AUTH_TOKEN="
+    ALIAS_ENV="ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_AUTH_TOKEN="
     CONFIG_NOTE="# Installation propre — aucune config Claude Code personnelle"
 fi
 
-# Variables communes de télémétrie + modèle
-ALIAS_TELEMETRY="CLAUDE_CODE_DISABLE_TELEMETRY=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 ANTHROPIC_MODEL=kali-anima:latest"
+ALIAS_TELEMETRY="CLAUDE_CODE_DISABLE_TELEMETRY=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 ANTHROPIC_MODEL=kali-lite:latest"
 
-# ── Injection du nouveau bloc ──
-cat >> "$BASHRC_FILE" <<ALIASES
+cat >> "$SHELL_RC" <<ALIASES
 
-# ── Kalicorp — Claude Code via Ollama (alias isolés, zero tracking) v2.2 ──
+# ── Kalicorp — Kali-Lite V1 · Alias isolés, zero tracking ──
 ${CONFIG_NOTE}
-# kali-anima : modèle local Ollama (kali-anima:latest, base qwen3.5:9b, 256K ctx)
-alias kali-anima='env ${ALIAS_ENV} ${ALIAS_TELEMETRY} claude'
+export CLAUDE_TELEMETRY=false
+alias kali-lite='env ${ALIAS_ENV} ${ALIAS_TELEMETRY} claude --dangerously-skip-permissions'
 # ── Fin Kalicorp ──
 ALIASES
 
-info "Alias kali-anima injecté dans $BASHRC_FILE ✓"
-info "Aucune variable globale injectée — zéro conflit ✓"
+chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
+ok "Alias kali-lite injecté dans $SHELL_RC"
 
-# Fixer les permissions
-chown "$REAL_USER:$REAL_USER" "$BASHRC_FILE" 2>/dev/null || true
-
-# ─────────────────────────────────────────────
-# Vérification finale
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# RÉSUMÉ FINAL
+# ═══════════════════════════════════════════════════════════════
 echo ""
-echo "╔══════════════════════════════════════════════════╗"
-echo "║              Vérification finale                 ║"
-echo "╚══════════════════════════════════════════════════╝"
+echo -e "${BOLD}  ╔══════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}${BOLD}  ║       Kali-Lite V1 — Installation OK ✓          ║${NC}"
+echo -e "${BOLD}  ╚══════════════════════════════════════════════════╝${NC}"
 echo ""
 
-OLLAMA_VER=$(ollama --version 2>/dev/null || echo "NON TROUVÉ")
-MODEL_STATUS=$(ollama list 2>/dev/null | grep "qwen3\.5" | head -1 || echo "NON TROUVÉ")
-ANIMA_STATUS=$(ollama list 2>/dev/null | grep "^kali-anima" | awk '{print $1}' || echo "NON TROUVÉ")
-DAEMON_STATUS=$(pgrep -x ollama &>/dev/null && echo "ACTIF ✓" || echo "INACTIF ✗")
-API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "DISPONIBLE ✓" || echo "INDISPONIBLE ✗")
+GPU_INFO=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo "N/A (CPU mode)")
+OLLAMA_VER=$(ollama --version 2>/dev/null || echo "N/A")
+CLAUDE_VER_F=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "N/A")
+KALI_STATUS=$(ollama list 2>/dev/null | grep "^kali-lite" | awk '{print $1}' || echo "NON TROUVÉ")
+API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "ACTIF ✓" || echo "INACTIF ✗")
 
-ENV_REMAINING=$(grep -cE "^(ANTHROPIC|KALICORP)" /etc/environment 2>/dev/null || echo "0")
-if [[ "$ENV_REMAINING" -eq 0 ]]; then
-    ENV_CLEAN="PROPRE ✓"
-else
-    ENV_CLEAN="⚠ ${ENV_REMAINING} variable(s) restante(s) — vérifier manuellement"
-fi
-
-PERSO_STATUS="Non détectée"
-[[ $PERSO_CONFIG_FOUND -eq 1 ]] && PERSO_STATUS="Détectée et PRÉSERVÉE ✓"
-
+echo -e "  GPU       : $GPU_INFO"
+echo -e "  Ollama    : $OLLAMA_VER · API $API_STATUS"
+echo -e "  Claude    : v${CLAUDE_VER_F}"
+echo -e "  Modèle    : ${KALI_STATUS}"
+echo -e "  Modelfile : /etc/kalicorp/Modelfile.kali-lite"
+echo -e "  Shell     : $SHELL_RC"
 echo ""
-info "Ollama           : $OLLAMA_VER"
-info "Daemon           : $DAEMON_STATUS"
-info "API              : $API_STATUS"
-info "Modèle base      : ${MODEL_STATUS:-NON TROUVÉ}"
-info "Kali-Anima       : ${ANIMA_STATUS:-NON TROUVÉ}"
-info "/etc/environment : $ENV_CLEAN"
-info "Config perso     : $PERSO_STATUS"
-info "Alias injectés   : kali-anima"
-info "Config shell     : $BASHRC_FILE"
-info "Backup           : ${BASHRC_FILE}.bak.*"
+echo -e "  ${CYAN}Relancer le shell puis :${NC}"
+echo -e "  ${BOLD}source $SHELL_RC${NC}"
+echo -e "  ${BOLD}kali-lite${NC}"
+echo ""
+echo -e "  Ou chat direct Ollama :"
+echo -e "  ${BOLD}ollama run kali-lite${NC}"
 echo ""
 
-echo "╔══════════════════════════════════════════════════╗"
-echo "║          Installation terminée ✓                 ║"
-echo "╚══════════════════════════════════════════════════╝"
-echo ""
-info "Comment utiliser Kali-Anima :"
-echo ""
-echo "  # Option 1 — Chat direct Ollama (sans Claude Code)"
-echo "  ollama run kali-anima"
-echo ""
-echo "  # Option 2 — Claude Code via alias isolé"
-echo "  source ~/.bashrc"
-echo "  kali-anima"
-echo ""
-echo "  >>> présente-toi"
-echo ""
-
-if [[ $PERSO_CONFIG_FOUND -eq 1 ]]; then
-    warn "Config Claude Code personnelle préservée :"
-    note "  'claude' normal continue d'utiliser votre ANTHROPIC_API_KEY globale"
-    note "  'kali-anima' pointe sur Ollama local via env inline (isolé)"
-    note "  Les deux coexistent sans aucun conflit"
-    echo ""
-fi
-
-warn "ANTHROPIC_AUTH_TOKEN est vidé dans l'alias (si pas de config perso)"
-warn "pour éviter les conflits avec les autres alias Kalicorp (kali-code, etc.)"
-echo ""
+[[ $PERSO_FOUND -eq 1 ]] && warn "Config Claude Code perso préservée — 'claude' continue sur ton API key"
