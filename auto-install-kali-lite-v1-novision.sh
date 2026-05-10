@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
-#  auto-install-kali-lite-v1-novision.sh
-#  Kalicorp · Kali-Lite V1 (qwen3:8b) — Cross-Platform Autoinstaller
+#  install-kali-lite-v1.sh
+#  Kalicorp · Kali-Lite V1 — Cross-Platform Autoinstaller
 #  GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
 #
 #  Stack : Ollama · qwen3:8b · Modelfile Kali-Lite · Claude Code
 #  Supported : Linux (Debian/Ubuntu/Kali/Arch) + macOS (Intel/Apple Silicon)
-#
+#https://github.com/balduregates1/kalicorp-hardening/blob/main/INSTALLATION.md
 #  Usage :
-#    Linux  : sudo bash <(curl -fsSL https://...auto-install-kali-lite-v1-novision.sh)
-#    macOS  : bash <(curl -fsSL https://...auto-install-kali-lite-v1-novision.sh)  # NO sudo
+#    Linux  : sudo bash <(curl -fsSL https://...install.sh)
+#    macOS  : bash <(curl -fsSL https://...install.sh)  # NO sudo
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -25,11 +25,11 @@ section() { echo -e "\n${BLUE}${BOLD}[»] $*${NC}\n"; }
 
 # ── Bannière ──────────────────────────────────────────────────
 echo -e "${BOLD}"
-echo "  ╔════════════════════════════════════════════════════════╗"
-echo "  ║   Kalicorp — Kali-Lite V1 (qwen3:8b) · Autoinstaller  ║"
-echo "  ║   GPL-2.0  ·  Zero cloud  ·  Zero tracking            ║"
-echo "  ║   Linux + macOS (Intel/Apple Silicon)                 ║"
-echo "  ╚════════════════════════════════════════════════════════╝"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║   Kalicorp — Kali-Lite V1 · Autoinstaller       ║"
+echo "  ║   GPL-2.0  ·  Zero cloud  ·  Zero tracking      ║"
+echo "  ║   Linux + macOS (Intel/Apple Silicon)           ║"
+echo "  ╚══════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
 # ═══════════════════════════════════════════════════════════════
@@ -50,13 +50,13 @@ section "0/6 — Prerequisites"
 
 # ── LINUX-ONLY: sudo check ──
 if [[ $IS_LINUX -eq 1 ]]; then
-    [[ $EUID -ne 0 ]] && err "Linux requires sudo: sudo bash auto-install-kali-lite-v1-novision.sh"
+    [[ $EUID -ne 0 ]] && err "Linux requires sudo: sudo bash install.sh"
 fi
 
 # ── MACOS-ONLY: warn about sudo ──
 if [[ $IS_MACOS -eq 1 ]]; then
     if [[ $EUID -eq 0 ]]; then
-        err "macOS: Do NOT run with sudo — Homebrew refuses root. Use: bash auto-install-kali-lite-v1-novision.sh"
+        err "macOS: Do NOT run with sudo — Homebrew refuses root. Use: bash install.sh"
     fi
 fi
 
@@ -171,7 +171,7 @@ install_linux() {
     done
 
     # ── 3. qwen3:8b ──
-    section "3/6 — Model qwen3:8b (~5.2 GB) [V1 - No Vision]"
+    section "3/6 — Model qwen3:8b (~5.2 GB)"
     if ollama list 2>/dev/null | grep -q "^qwen3.*8b"; then
         ok "qwen3:8b already present"
     else
@@ -251,7 +251,7 @@ install_macos() {
     done
 
     # ── 3. qwen3:8b ──
-    section "3/6 — Model qwen3:8b (~5.2 GB) [V1 - No Vision]"
+    section "3/6 — Model qwen3:8b (~5.2 GB)"
     if ollama list 2>/dev/null | grep -q "^qwen3.*8b"; then
         ok "qwen3:8b already present"
     else
@@ -269,15 +269,15 @@ install_macos() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# SHARED: Modelfile Setup (V1 - qwen3:8b)
+# SHARED: Modelfile Setup
 # ═══════════════════════════════════════════════════════════════
 setup_modelfile() {
-    section "4/6 — Kali-Lite V1 Modelfile (qwen3:8b)"
+    section "4/6 — Kali-Lite Modelfile"
 
     if [[ $IS_LINUX -eq 1 ]]; then
         MODELFILE_DIR="/etc/kalicorp"
         sudo mkdir -p "$MODELFILE_DIR"
-        MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite-v1"
+        MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite"
         # Write as root, then fix permissions
         sudo tee "$MODELFILE_PATH" > /dev/null <<'MODELFILE_EOF'
 FROM qwen3:8b
@@ -359,11 +359,11 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 - Interlocuteur principal : Thibaut Neihouser, fondateur Kalicorp
 
 ## Infrastructure
-- Machine : MSI Panther, Kali Linux, RTX 3080 Laptop 8Go
-- Le Sanctuaire, Sissonne (Aisne) — infrastructure souveraine on-premise
-- Serveurs principaux : neo-i9 (RTX 4090 + RTX 5080), neo-3090 (RTX 3090)
-- Stack : Ray 2.54.1 · Ollama · LiteLLM 1.81.8 · OpenWebUI
-- Relay neo-i9 si tâche lourde (RAG, 35B, image)
+- Machine : X, OS, gpu XGo
+- Le Sanctuaire, ville departement — infrastructure souveraine on-premise
+- Serveurs principaux : config hardware 
+- Stack : X · Ollama · X · X
+- Relay possible sur https://app.kalicorp.fr/ par api
 
 ## Périmètre opérationnel
 ✅ Code Python, Bash, YAML, configs système
@@ -373,7 +373,7 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 ✅ Claude Code : lecture fichiers, bash, édition, création
 
 ⚠️ Posture défensive uniquement — jamais offensif hors infrastructure Kalicorp
-⚠️ Tâches lourdes → signaler et proposer relay neo-i9
+⚠️ Tâches lourdes → signaler et proposer relay api kalicorp https://app.kalicorp.fr/
 
 ## Comportement
 - Répondre directement, sans préambule ("Bien sûr !", "Avec plaisir !" → interdit)
@@ -382,7 +382,7 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 - Si l'info manque → demander, jamais inventer
 - Credentials détectés dans le contexte → alerter Thibaut, ne jamais afficher en clair
 - Opérations sudo → confirmation Thibaut avant exécution
-- Un 7B n'est pas un 35B — honnêteté sur les limites
+- Un 8B n'est pas un 35B — honnêteté sur les limites
 
 ## Règles absolues
 1. Aucune donnée ne sort de cette machine sans ordre explicite de Thibaut
@@ -405,7 +405,7 @@ MODELFILE_EOF
     else
         MODELFILE_DIR="${REAL_HOME}/.kalicorp"
         mkdir -p "$MODELFILE_DIR"
-        MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite-v1"
+        MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite"
         cat > "$MODELFILE_PATH" <<'MODELFILE_EOF'
 FROM qwen3:8b
 
@@ -535,32 +535,32 @@ MODELFILE_EOF
 }
 
 # ═══════════════════════════════════════════════════════════════
-# SHARED: Create Model (V1)
+# SHARED: Create Model
 # ═══════════════════════════════════════════════════════════════
 setup_model() {
-    section "5/6 — Creating kali-lite-v1:latest model"
+    section "5/6 — Creating kali-lite:latest model"
 
     if [[ $IS_LINUX -eq 1 ]]; then
-        MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite-v1"
+        MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
     else
-        MODELFILE_PATH="${REAL_HOME}/.kalicorp/Modelfile.kali-lite-v1"
+        MODELFILE_PATH="${REAL_HOME}/.kalicorp/Modelfile.kali-lite"
     fi
 
-    if ollama list 2>/dev/null | grep -q "^kali-lite-v1"; then
-        warn "kali-lite-v1 already present — recreating..."
-        ollama rm kali-lite-v1 2>/dev/null || true
+    if ollama list 2>/dev/null | grep -q "^kali-lite"; then
+        warn "kali-lite already present — recreating..."
+        ollama rm kali-lite 2>/dev/null || true
     fi
 
-    ollama create kali-lite-v1 -f "$MODELFILE_PATH" || err "Model creation failed"
-    ok "kali-lite-v1:latest created"
+    ollama create kali-lite -f "$MODELFILE_PATH" || err "Model creation failed"
+    ok "kali-lite:latest created"
 
     # Quick ping
-    info "Pinging kali-lite-v1..."
+    info "Pinging kali-lite..."
     RESP=$(curl -sf http://localhost:11434/api/chat --max-time 30 \
-        -d '{"model":"kali-lite-v1:latest","messages":[{"role":"user","content":"ping"}],"stream":false}' \
+        -d '{"model":"kali-lite:latest","messages":[{"role":"user","content":"ping"}],"stream":false}' \
         2>/dev/null || echo "")
     if echo "$RESP" | grep -qi "content\|pong\|kali"; then
-        ok "kali-lite-v1 responds"
+        ok "kali-lite responds"
     else
         warn "No ping response (model may still be loading)"
     fi
@@ -626,7 +626,7 @@ PYEOF
 }
 
 # ═══════════════════════════════════════════════════════════════
-# SHARED: Inject Alias (V1)
+# SHARED: Inject Alias
 # ═══════════════════════════════════════════════════════════════
 inject_alias() {
     # Ensure $SHELL_RC exists
@@ -635,23 +635,23 @@ inject_alias() {
     if [[ $PERSO_FOUND -eq 1 ]]; then
         cat >> "$SHELL_RC" <<'ALIASES'
 
-# ── Kalicorp — Kali-Lite V1 (qwen3:8b) · Alias (personal config preserved) ──
+# ── Kalicorp — Kali-Lite V1 · Alias (personal config preserved) ──
 export CLAUDE_TELEMETRY=false
-alias kali-lite-v1='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite-v1:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
+alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
 # ── End Kalicorp ──
 ALIASES
     else
         cat >> "$SHELL_RC" <<'ALIASES'
 
-# ── Kalicorp — Kali-Lite V1 (qwen3:8b) · Alias (clean install) ──
+# ── Kalicorp — Kali-Lite V1 · Alias (clean install) ──
 export CLAUDE_TELEMETRY=false
-alias kali-lite-v1='ANTHROPIC_AUTH_TOKEN="" ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite-v1:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
+alias kali-lite='ANTHROPIC_AUTH_TOKEN="" ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
 # ── End Kalicorp ──
 ALIASES
     fi
 
     chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
-    ok "Alias kali-lite-v1 injected into $SHELL_RC"
+    ok "Alias kali-lite injected into $SHELL_RC"
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -659,23 +659,23 @@ ALIASES
 # ═══════════════════════════════════════════════════════════════
 print_summary() {
     echo ""
-    echo -e "${BOLD}  ╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}${BOLD}  ║       Kali-Lite V1 — Installation OK ✓                  ║${NC}"
-    echo -e "${BOLD}  ╚═══════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${BOLD}  ╔══════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}${BOLD}  ║       Kali-Lite V1 — Installation OK ✓          ║${NC}"
+    echo -e "${BOLD}  ╚══════════════════════════════════════════════════╝${NC}"
     echo ""
 
     GPU_INFO=$(get_gpu_info)
     OLLAMA_VER=$(ollama --version 2>/dev/null || echo "N/A")
     CLAUDE_VER_F=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "N/A")
-    KALI_STATUS=$(ollama list 2>/dev/null | grep "^kali-lite-v1" | awk '{print $1}' || echo "NOT FOUND")
+    KALI_STATUS=$(ollama list 2>/dev/null | grep "^kali-lite" | awk '{print $1}' || echo "NOT FOUND")
     API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "ACTIVE ✓" || echo "INACTIVE ✗")
 
     if [[ $IS_LINUX -eq 1 ]]; then
-        MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite-v1"
+        MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
         LOG_PATH="/var/log/kalicorp/ollama.log"
         PID_PATH="/var/run/kalicorp-ollama.pid"
     else
-        MODELFILE_PATH="${REAL_HOME}/.kalicorp/Modelfile.kali-lite-v1"
+        MODELFILE_PATH="${REAL_HOME}/.kalicorp/Modelfile.kali-lite"
         LOG_PATH="${REAL_HOME}/Library/Logs/kalicorp/ollama.log"
         PID_PATH="${REAL_HOME}/Library/kalicorp/ollama.pid"
     fi
@@ -691,10 +691,10 @@ print_summary() {
     echo ""
     echo -e "  ${CYAN}Next steps:${NC}"
     echo -e "  ${BOLD}source $SHELL_RC${NC}"
-    echo -e "  ${BOLD}kali-lite-v1${NC}"
+    echo -e "  ${BOLD}kali-lite${NC}"
     echo ""
     echo -e "  Or direct Ollama chat:"
-    echo -e "  ${BOLD}ollama run kali-lite-v1${NC}"
+    echo -e "  ${BOLD}ollama run kali-lite${NC}"
     echo ""
 
     [[ $PERSO_FOUND -eq 1 ]] && warn "Personal Claude config preserved — 'claude' continues with your API key"
