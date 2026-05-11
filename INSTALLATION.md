@@ -1,6 +1,6 @@
 # Kali-Lite V1 — Installation Guide
 
-Cross-platform installer for **Kali-Lite**, a sovereign, local-first AI assistant powered by Qwen 3B via Ollama + Claude Code.
+Cross-platform installer for **Kali-Lite**, a sovereign, local-first AI assistant powered by Qwen 8B via Ollama + Claude Code.
 
 ## Quick Start
 
