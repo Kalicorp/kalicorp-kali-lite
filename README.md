@@ -1,11 +1,8 @@
-# kalicorp-hardening — Kali-lite
+# kalicorp-hardening — Kali-lite v2
 
-**Local AI operational environment**
+**LLM local multi-rôle — CLI & chatbot souverain**
 
-Kali-Lite est une IA locale conçue pour travailler au plus près du système,
-sans déplacer vos données, vos habitudes ou votre environnement.
-
-Assistant IA souverain, conçu pour fonctionner sans infrastructure cloud propriétaire.
+Kali-Lite v2 est un LLM local multi-rôle — CLI et chatbot souverain — conçu pour travailler au plus près du système, sans déplacer vos données, vos habitudes ou votre environnement.
 
 ## Architecture
 
@@ -18,7 +15,7 @@ Assistant IA souverain, conçu pour fonctionner sans infrastructure cloud propri
 ## Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh | bash
 ```
 
 ~20 min. ~10 Go VRAM recommandés — 8 Go possibles avec contraintes selon usage.
@@ -29,7 +26,8 @@ curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/ma
 |---|---|---|---|---|
 | Minimale | 8 Go | 16 Go | 6 cœurs | Ubuntu 22.04+ |
 | Recommandée | 8 Go+ | 32 Go | 8 cœurs+ | Kali / Debian |
-| Testée | 8 Go RTX 3080 | 64 Go | i7-10750H 6c/12t | Kali Linux 6.19 |
+| Testée | 8 Go RTX 3080 | 64 Go | i7-10750H 6c/12t | Kali Linux 6.18 |
+| macOS | 8 Go+ (Metal) | 16 Go | Apple Silicon / Intel | macOS 11+ |
 
 ## Cas d'usage
 
@@ -70,9 +68,8 @@ Pas à sa place.
 
 GPL-2.0 — redistribution autorisée.
 
-## Cadre
+## Cadre — conformité RGPD / AI Act
 
-conçu pour faciliter la conformité RGPD / AI Act
----
+Conçu pour faciliter la conformité RGPD / AI Act.
 
 Kalicorp | Le Sanctuaire, Sissonne | 2026 | app.kalicorp.fr
