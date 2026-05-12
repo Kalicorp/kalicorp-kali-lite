@@ -9,7 +9,7 @@ Assistant IA souverain, conçu pour fonctionner sans infrastructure cloud propri
 
 ## Architecture
 
-- **Moteur** : qwen3.5:9b (vision) via Ollama
+- **Moteur** : qwen3.5:9b (vision, custom local) via Ollama
 - **Interface** : Claude Code v2+ — proxy Ollama local au format API Anthropic
 - **Identité** : gravée dans un Modelfile + CLAUDE.md
 - **Données** : sur site uniquement — aucune extraction

@@ -3,6 +3,7 @@
 # GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
 # Installation locale en 1 clic : Ollama + qwen3.5:9b + Modelfile Kali-Anima
 # Intégration Claude Code via Ollama API compatible Anthropic
+# Supports: Linux (Debian/Kali/Ubuntu) + macOS (Intel/Apple Silicon)
 set -euo pipefail
 
 RED='\033[0;31m'
@@ -13,20 +14,44 @@ NC='\033[0m'
 info()  { echo -e "${GREEN}[+]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[-]${NC} $1"; exit 1; }
+section() { echo -e "\n${GREEN}═══ $1 ═══${NC}"; }
 
-echo "====== Kalicorp Hardening — Installation ======"
+echo "====== Kalicorp Hardening — Kali-Lite v2 ======"
 echo "  GPL-2.0 | Zero cloud | Zero tracking"
-echo "  Claude Code via Ollama API compatible Anthropic"
+echo "  Linux + macOS"
 echo "====== ========================================="
 echo ""
 
-# --- Prérequis ---
-if [[ $EUID -ne 0 ]]; then
-    error "Ce script doit être exécuté en root ou avec sudo"
+# ── Détection OS ──
+OS="$(uname -s)"
+case "$OS" in
+  Linux)  OS_TYPE="linux"  ;;
+  Darwin) OS_TYPE="macos"  ;;
+  *)      error "OS non supporté : $OS — Linux et macOS uniquement." ;;
+esac
+
+# ── Utilisateur réel (fix sudo → root) ──
+# Quand lancé avec sudo, ~ = /root. On récupère le vrai home de l'appelant.
+if [[ "$OS_TYPE" == "linux" ]]; then
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    REAL_USER="$SUDO_USER"
+    REAL_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+  else
+    REAL_USER="$(whoami)"
+    REAL_HOME="$HOME"
+  fi
+else
+  # macOS : Homebrew refuse root, donc on tourne en user normal
+  if [[ $EUID -eq 0 ]]; then
+    error "Ne pas lancer en root sur macOS. Utilisez : bash <(curl -fsSL ...)"
+  fi
+  REAL_USER="$(whoami)"
+  REAL_HOME="$HOME"
 fi
 
+# ── Prérequis communs ──
 if ! command -v curl &>/dev/null; then
-    error "curl est requis. Installez-le : apt install curl"
+    error "curl est requis. Installez-le puis relancez."
 fi
 
 # --- 1. Ollama ---
@@ -37,19 +62,44 @@ else
     curl -fsSL https://ollama.ai/install.sh | sh
 fi
 
-# --- 2. Démarrage du daemon Ollama ---
+# ── Daemon Ollama ──
 info "Démarrage du daemon Ollama..."
-if ! pgrep -x ollama &>/dev/null; then
-    ollama serve > /var/log/ollama.log 2>&1 &
-    sleep 3
-    if pgrep -x ollama &>/dev/null; then
-        info "Daemon Ollama démarré"
-    else
-        warn "Daemon Ollama en cours de démarrage (vérifiez /var/log/ollama.log)"
-    fi
-else
+if pgrep -x ollama &>/dev/null; then
     warn "Daemon Ollama déjà actif"
+else
+  if [[ "$OS_TYPE" == "linux" ]]; then
+    if command -v systemctl &>/dev/null && systemctl is-active --quiet ollama 2>/dev/null; then
+      warn "Service Ollama déjà actif via systemctl"
+    else
+      info "Démarrage d'Ollama en background..."
+      mkdir -p /var/log/kalicorp
+      nohup ollama serve > /var/log/kalicorp/ollama.log 2>&1 &
+      echo $! > /var/run/kalicorp-ollama.pid
+      info "Daemon Ollama démarré (PID: $(cat /var/run/kalicorp-ollama.pid))"
+    fi
+  else
+    # macOS
+    if brew services list 2>/dev/null | grep -q "ollama.*started"; then
+      warn "Service Ollama déjà actif (brew services)"
+    else
+      info "Démarrage d'Ollama..."
+      brew services start ollama 2>/dev/null \
+        || (nohup ollama serve > "$REAL_HOME/Library/Logs/kalicorp/ollama.log" 2>&1 & echo $! > "$REAL_HOME/Library/kalicorp/ollama.pid"; info "Ollama lancé en bg")
+    fi
+  fi
 fi
+
+# ── Attente readiness ──
+info "Attente du démarrage d'Ollama (max 30s)..."
+_wait=0
+until curl -sf http://localhost:11434/api/tags &>/dev/null; do
+    sleep 2
+    _wait=$((_wait+2))
+    if [[ $_wait -ge 30 ]]; then
+        error "Ollama API non disponible après 30s. Vérifiez les logs."
+    fi
+done
+info "Ollama API disponible"
 
 # --- 3. Modèle qwen3.5:9b ---
 info "Téléchargement du modèle qwen3.5:9b (~6 Go)..."
@@ -97,53 +147,57 @@ if ollama list 2>/dev/null | grep -q "kali-anima"; then
 fi
 ollama create kali-anima -f /etc/kalicorp/Modelfile
 
-# --- 6. Configuration Claude Code ---
+# ── Configuration Claude Code ──
 info "Configuration de l'environnement Claude Code..."
-ENV_FILE="$HOME/.bashrc"
+
+# Détection shell RC
+SHELL_RC=""
+if [[ -f "$REAL_HOME/.zshrc" ]]; then
+    SHELL_RC="$REAL_HOME/.zshrc"
+elif [[ -f "$REAL_HOME/.bashrc" ]]; then
+    SHELL_RC="$REAL_HOME/.bashrc"
+else
+    SHELL_RC="$REAL_HOME/.bashrc"
+    touch "$SHELL_RC"
+fi
 
 # Variables Ollama API compatible Anthropic
+# ANTHROPIC_AUTH_TOKEN est inutile — Claude Code utilise ANTHROPIC_API_KEY
 OLLAMA_VARS=(
     'export ANTHROPIC_BASE_URL="http://localhost:11434"'
-    'export ANTHROPIC_AUTH_TOKEN="ollama"'
-    'export ANTHROPIC_API_KEY=""'
+    'export ANTHROPIC_API_KEY="ollama"'
 )
 
 # Vérifier si les variables sont déjà présentes
 for var in "${OLLAMA_VARS[@]}"; do
-    if ! grep -qF "$var" "$ENV_FILE" 2>/dev/null; then
-        echo "" >> "$ENV_FILE"
-        echo "# Kalicorp — Ollama API compatible Anthropic" >> "$ENV_FILE"
-        echo "$var" >> "$ENV_FILE"
-        info "Ajouté à $ENV_FILE : $(echo "$var" | cut -d= -f1)"
+    if ! grep -qF "$var" "$SHELL_RC" 2>/dev/null; then
+        echo "" >> "$SHELL_RC"
+        echo "# Kalicorp — Ollama API compatible Anthropic" >> "$SHELL_RC"
+        echo "$var" >> "$SHELL_RC"
+        info "Ajouté à $SHELL_RC : $(echo "$var" | cut -d= -f1)"
     else
-        warn "Déjà présent dans $ENV_FILE : $(echo "$var" | cut -d= -f1)"
+        warn "Déjà présent dans $SHELL_RC : $(echo "$var" | cut -d= -f1)"
     fi
 done
 
-# --- 7. Vérification ---
+# Fix ownership si lancé en sudo
+if [[ -n "${SUDO_USER:-}" ]]; then
+    chown "$REAL_USER:$REAL_USER" "$SHELL_RC"
+fi
+
+# ── Vérification ---
 echo ""
-info "====== Vérification ======"
-echo ""
-info "Ollama  : $(ollama --version 2>/dev/null || echo 'non démarré')"
-info "Modèle  : $(ollama list 2>/dev/null | grep qwen3.5:9b   || echo 'non trouvé')"
-info "Anima   : $(ollama list 2>/dev/null | grep kali-anima || echo 'NON TROUVÉ')"
-echo ""
-info "====== Installation terminée ======"
+section "Vérification"
+info "Ollama    : $(ollama --version 2>/dev/null || echo 'non démarré')"
+info "Modèle    : $(ollama list 2>/dev/null | grep qwen3.5:9b   || echo 'non trouvé')"
+info "Anima     : $(ollama list 2>/dev/null | grep kali-anima || echo 'NON TROUVÉ')"
+info "Modelfile : /etc/kalicorp/Modelfile"
+info "Config    : $SHELL_RC"
 echo ""
 info "Pour utiliser Kali-Anima :"
 echo ""
-echo "  # Option 1 — Ligne de commande"
-echo "  export ANTHROPIC_BASE_URL=http://localhost:11434"
-echo "  export ANTHROPIC_AUTH_TOKEN=ollama"
-echo "  export ANTHROPIC_API_KEY="
+echo "  source $SHELL_RC"
 echo "  ollama run kali-anima"
 echo ""
-echo "  # Option 2 — Claude Code"
-echo "  source ~/.bashrc"
-echo "  claude"
-echo ""
 echo "  >>> présente-toi"
-echo ""
-info "Le Modelfile est dans /etc/kalicorp/Modelfile"
-info "Les variables d'environnement sont dans ~/.bashrc"
 echo ""
