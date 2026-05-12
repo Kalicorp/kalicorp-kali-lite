@@ -1,8 +1,8 @@
-# kalicorp-hardening — Kali-lite v2
+# kalicorp-hardening — Kali-lite
 
 **Local AI operational environment**
 
-Kali-Lite v2 est une IA locale conçue pour travailler au plus près du système,
+Kali-Lite est une IA locale conçue pour travailler au plus près du système,
 sans déplacer vos données, vos habitudes ou votre environnement.
 
 Assistant IA souverain, conçu pour fonctionner sans infrastructure cloud propriétaire.
