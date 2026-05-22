@@ -1,12 +1,12 @@
-# kalicorp-hardening — Kali-lite v2
+# kalicorp-hardening — Kali-Lite
 
 **LLM local multi-rôle — CLI & chatbot souverain**
 
-Kali-Lite v2 est un LLM local multi-rôle — CLI et chatbot souverain — conçu pour travailler au plus près du système, sans déplacer vos données, vos habitudes ou votre environnement.
+Kali-Lite est un LLM local multi-rôle — CLI et chatbot souverain — conçu pour travailler au plus près du système, sans déplacer vos données, vos habitudes ou votre environnement.
 
 ## Architecture
 
-- **Moteur** : qwen3.5:9b (vision, custom local) via Ollama
+- **Moteur** : `qwen3.5:9b` (vision, custom local) via Ollama
 - **Interface** : Claude Code v2+ — proxy Ollama local au format API Anthropic
 - **Identité** : gravée dans un Modelfile + CLAUDE.md
 - **Données** : sur site uniquement — aucune extraction
