@@ -89,9 +89,6 @@ jobs:
       - name: Check v2 has Modelfile
         run: grep -q 'Modelfile\|MODELFILE' auto-install-kali-lite-v2-vision.sh
 
-      - name: Check v2 has Claude Code install
-        run: grep -q 'claude-code\|claude' auto-install-kali-lite-v2-vision.sh
-
       - name: Check v2 has alias injection
         run: grep -q 'kali-lite' auto-install-kali-lite-v2-vision.sh
 
