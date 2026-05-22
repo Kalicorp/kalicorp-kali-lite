@@ -12,7 +12,6 @@ on:
       - 'auto-install-*.sh'
       - '.github/workflows/*.yml'
   schedule:
-    # Weekly smoke test
     - cron: '0 9 * * 1'
 
 jobs:
@@ -44,9 +43,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Verify v1 installer is executable
-        run: test -x auto-install-kali-lite-v1-novision.sh || echo "not executable (ok, will be chmod +x)"
 
       - name: Check v1 shebang
         run: head -1 auto-install-kali-lite-v1-novision.sh | grep -q '^#!/usr/bin/env bash'
@@ -153,13 +149,26 @@ jobs:
       - name: Check required files exist
         run: |
           for f in README.md MODEL-CARD.md CODE_OF_CONDUCT.md LICENSE .gitignore; do
-            test -f "$f" || echo "MISSING: $f"
+            if [ ! -f "$f" ]; then
+              echo "FAIL: $f is missing"
+              exit 1
+            fi
           done
 
       - name: Check .github structure
         run: |
-          test -d .github/ISSUE_TEMPLATE || echo "MISSING: .github/ISSUE_TEMPLATE"
-          test -f .github/CONTRIBUTING.md || echo "MISSING: .github/CONTRIBUTING.md"
+          if [ ! -d .github/ISSUE_TEMPLATE ]; then
+            echo "FAIL: .github/ISSUE_TEMPLATE is missing"
+            exit 1
+          fi
+          if [ ! -f .github/CONTRIBUTING.md ]; then
+            echo "FAIL: .github/CONTRIBUTING.md is missing"
+            exit 1
+          fi
 
       - name: Check banner exists
-        run: test -f assets/kali-lite-banner.png || echo "MISSING: assets/kali-lite-banner.png"
+        run: |
+          if [ ! -f assets/kali-lite-banner.png ]; then
+            echo "FAIL: assets/kali-lite-banner.png is missing"
+            exit 1
+          fi
