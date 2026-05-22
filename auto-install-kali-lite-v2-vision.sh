@@ -72,9 +72,6 @@ install_linux() {
         ok "Ollama installed"
     fi
 
-    section "2/6 — Ollama Daemon"
-    sudo mkdir -p /var/log/kalicorp
-
     section "3/6 — Model qwen3.5:9b (Vision)"
     if ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
         ok "qwen3.5:9b already present"
@@ -104,10 +101,6 @@ install_macos() {
         brew install ollama || err "Ollama installation failed"
         ok "Ollama installed"
     fi
-
-    section "2/6 — Ollama Daemon"
-    brew services start ollama 2>/dev/null || true
-    sleep 2
 
     section "3/6 — Model qwen3.5:9b (Vision)"
     if ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
