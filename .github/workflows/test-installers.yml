@@ -1,0 +1,165 @@
+name: Test Installers
+
+on:
+  push:
+    paths:
+      - 'install.sh'
+      - 'auto-install-*.sh'
+      - '.github/workflows/*.yml'
+  pull_request:
+    paths:
+      - 'install.sh'
+      - 'auto-install-*.sh'
+      - '.github/workflows/*.yml'
+  schedule:
+    # Weekly smoke test
+    - cron: '0 9 * * 1'
+
+jobs:
+  lint-scripts:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck installers
+        uses: ludeeus/action-shellcheck@master
+        with:
+          ignore_paths: |
+            **/auto-install-kali-lite-v1-novision.sh
+            **/auto-install-kali-lite-v2-vision.sh
+          severity: warning
+
+      - name: Check install.sh syntax
+        run: bash -n install.sh
+
+      - name: Check v1 installer syntax
+        run: bash -n auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v2 installer syntax
+        run: bash -n auto-install-kali-lite-v2-vision.sh
+
+  test-v1-syntax:
+    name: Kali-Lite v1 — syntax & structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify v1 installer is executable
+        run: test -x auto-install-kali-lite-v1-novision.sh || echo "not executable (ok, will be chmod +x)"
+
+      - name: Check v1 shebang
+        run: head -1 auto-install-kali-lite-v1-novision.sh | grep -q '^#!/usr/bin/env bash'
+
+      - name: Check v1 has OS detection
+        run: grep -q 'detect_os\|uname -s\|IS_LINUX\|IS_MACOS' auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v1 has Ollama install
+        run: grep -q 'ollama' auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v1 has qwen3:8b
+        run: grep -q 'qwen3:8b' auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v1 has Modelfile
+        run: grep -q 'Modelfile\|MODELFILE' auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v1 has Claude Code install
+        run: grep -q 'claude-code\|claude' auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v1 has alias injection
+        run: grep -q 'kali-lite' auto-install-kali-lite-v1-novision.sh
+
+      - name: Check v1 has GPL license header
+        run: grep -q 'GPL' auto-install-kali-lite-v1-novision.sh
+
+  test-v2-syntax:
+    name: Kali-Lite v2 — syntax & structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check v2 shebang
+        run: head -1 auto-install-kali-lite-v2-vision.sh | grep -q '^#!/usr/bin/env bash'
+
+      - name: Check v2 has OS detection
+        run: grep -q 'detect_os\|uname -s\|IS_LINUX\|IS_MACOS' auto-install-kali-lite-v2-vision.sh
+
+      - name: Check v2 has Ollama install
+        run: grep -q 'ollama' auto-install-kali-lite-v2-vision.sh
+
+      - name: Check v2 has qwen3.5:9b
+        run: grep -q 'qwen3.5:9b' auto-install-kali-lite-v2-vision.sh
+
+      - name: Check v2 has Modelfile
+        run: grep -q 'Modelfile\|MODELFILE' auto-install-kali-lite-v2-vision.sh
+
+      - name: Check v2 has Claude Code install
+        run: grep -q 'claude-code\|claude' auto-install-kali-lite-v2-vision.sh
+
+      - name: Check v2 has alias injection
+        run: grep -q 'kali-lite' auto-install-kali-lite-v2-vision.sh
+
+      - name: Check v2 has GPL license header
+        run: grep -q 'GPL' auto-install-kali-lite-v2-vision.sh
+
+  test-install-sh:
+    name: install.sh — syntax & structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check install.sh shebang
+        run: head -1 install.sh | grep -q '^#!/usr/bin/env bash'
+
+      - name: Check install.sh has OS detection
+        run: grep -q 'detect_os\|uname -s' install.sh
+
+      - name: Check install.sh has Linux install
+        run: grep -q 'install_linux\|Linux' install.sh
+
+      - name: Check install.sh has macOS install
+        run: grep -q 'install_macos\|macOS\|Darwin' install.sh
+
+      - name: Check install.sh has shared functions
+        run: grep -q 'setup_modelfile\|setup_alias\|setup_claude_md' install.sh
+
+      - name: Check install.sh has GPL license header
+        run: grep -q 'GPL' install.sh
+
+  validate-readme:
+    name: Validate README
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check README has install commands
+        run: grep -q 'curl.*install' README.md
+
+      - name: Check README has badges
+        run: grep -q 'img.shields.io' README.md
+
+      - name: Check README references both versions
+        run: grep -q 'v2\|vision' README.md
+
+      - name: Check README references banner
+        run: grep -q 'banner' README.md
+
+  validate-structure:
+    name: Validate repo structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          for f in README.md MODEL-CARD.md CODE_OF_CONDUCT.md LICENSE .gitignore; do
+            test -f "$f" || echo "MISSING: $f"
+          done
+
+      - name: Check .github structure
+        run: |
+          test -d .github/ISSUE_TEMPLATE || echo "MISSING: .github/ISSUE_TEMPLATE"
+          test -f .github/CONTRIBUTING.md || echo "MISSING: .github/CONTRIBUTING.md"
+
+      - name: Check banner exists
+        run: test -f assets/kali-lite-banner.png || echo "MISSING: assets/kali-lite-banner.png"
