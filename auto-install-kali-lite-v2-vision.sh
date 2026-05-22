@@ -3,10 +3,6 @@
 # auto-install-kali-lite-v2-vision.sh
 # Kalicorp · Kali-Lite V2 (qwen3.5:9b + Vision) — Cross-Platform Autoinstaller
 # GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
-#
-# Stack : Ollama · qwen3.5:9b · Modelfile Kali-Lite · Claude Code
-# Features : Vision (image analysis)
-# Supported : Linux + macOS (Intel/Apple Silicon)
 # ═══════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -46,26 +42,23 @@ esac
 # ═══════════════════════════════════════════════════════════════
 section "0/6 — Prerequisites"
 
-# Linux requires sudo
 if [[ $IS_LINUX -eq 1 ]]; then
     [[ $EUID -ne 0 ]] && err "Linux requires sudo: sudo bash auto-install-kali-lite-v2-vision.sh"
 fi
 
-# macOS must NOT use sudo
 if [[ $IS_MACOS -eq 1 ]]; then
     [[ $EUID -eq 0 ]] && err "macOS: Do NOT run with sudo. Use: bash auto-install-kali-lite-v2-vision.sh"
 fi
 
-command -v curl &>/dev/null || err "curl is required — please install it and retry"
+command -v curl &>/dev/null || err "curl is required"
 
-# User context
 REAL_USER="${SUDO_USER:-${USER:-$(whoami)}}"
 REAL_HOME=$(eval echo ~$REAL_USER)
 info "User : $REAL_USER"
 info "Home : $REAL_HOME"
 
 # ═══════════════════════════════════════════════════════════════
-# LINUX-ONLY: Install function
+# LINUX INSTALL FUNCTION
 # ═══════════════════════════════════════════════════════════════
 install_linux() {
     section "Linux Setup — Ollama + qwen3.5:9b (Vision)"
@@ -73,7 +66,7 @@ install_linux() {
     # 1. Ollama
     section "1/6 — Ollama"
     if command -v ollama &>/dev/null; then
-        ok "Ollama already installed: $(ollama --version 2>/dev/null)"
+        ok "Ollama already installed"
     else
         info "Installing Ollama..."
         curl -fsSL https://ollama.com/install.sh | sh || err "Ollama installation failed"
@@ -86,15 +79,9 @@ install_linux() {
     if command -v systemctl &>/dev/null; then
         sudo systemctl enable --now ollama 2>/dev/null || true
         sleep 2
-        if sudo systemctl is-active --quiet ollama; then
-            ok "Ollama running via systemd"
-        else
-            warn "Starting Ollama manually..."
-            sudo nohup ollama serve > /var/log/kalicorp/ollama.log 2>&1 &
-        fi
     fi
 
-    # 3. Model qwen3.5:9b
+    # 3. Model
     section "3/6 — Model qwen3.5:9b (Vision)"
     if ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
         ok "qwen3.5:9b already present"
@@ -106,14 +93,13 @@ install_linux() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# MACOS-ONLY: Install function
+# MACOS INSTALL FUNCTION
 # ═══════════════════════════════════════════════════════════════
 install_macos() {
     section "macOS Setup — Ollama + qwen3.5:9b (Vision)"
 
-    # Check Homebrew
     if ! command -v brew &>/dev/null; then
-        err "Homebrew not found. Please install it from https://brew.sh and retry."
+        err "Homebrew not found. Please install it from https://brew.sh"
     fi
     ok "Homebrew detected"
 
@@ -131,12 +117,6 @@ install_macos() {
     section "2/6 — Ollama Daemon"
     brew services start ollama 2>/dev/null || true
     sleep 2
-    if brew services list | grep -q "ollama.*started"; then
-        ok "Ollama running via brew services"
-    else
-        warn "Starting Ollama manually..."
-        nohup ollama serve > "${REAL_HOME}/Library/Logs/kalicorp/ollama.log" 2>&1 &
-    fi
 
     # 3. Model
     section "3/6 — Model qwen3.5:9b (Vision)"
@@ -150,7 +130,7 @@ install_macos() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# MAIN: Choose the right function
+# MAIN
 # ═══════════════════════════════════════════════════════════════
 if [[ $IS_LINUX -eq 1 ]]; then
     install_linux
@@ -159,6 +139,4 @@ else
 fi
 
 ok "Kali-Lite V2 (qwen3.5:9b + Vision) installation completed successfully!"
-echo ""
 ok "You can now run:   ollama run qwen3.5:9b"
-echo ""
