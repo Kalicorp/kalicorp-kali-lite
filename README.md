@@ -22,7 +22,7 @@
 
 ### Installation ultra-simple (1 commande)
 
-```bash
+
 # Kali-Lite (8 Go VRAM - sans vision)
 curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/auto-install-kali-lite-v1-novision.sh | bash
 
