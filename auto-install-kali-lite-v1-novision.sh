@@ -6,7 +6,7 @@
 #
 #  Stack : Ollama · qwen3:8b · Modelfile Kali-Lite · Claude Code
 #  Supported : Linux (Debian/Ubuntu/Kali/Arch) + macOS (Intel/Apple Silicon)
-#https://github.com/balduregates1/kalicorp-hardening/blob/main/INSTALLATION.md
+#https://github.com/balduregates1/kalicorp-kali-lite/blob/main/INSTALLATION.md
 #  Usage :
 #    Linux  : sudo bash <(curl -fsSL https://...install.sh)
 #    macOS  : bash <(curl -fsSL https://...install.sh)  # NO sudo

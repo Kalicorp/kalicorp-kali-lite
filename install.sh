@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kalicorp-hardening — installation locale en 1 clic
+# kalicorp-kali-lite — installation locale en 1 clic
 # GPL-2.0 — Kalicorp | Le Sanctuaire | 2026
 # Supports: Linux (Debian/Kali/Ubuntu/Arch) + macOS (Intel/Apple Silicon)
 

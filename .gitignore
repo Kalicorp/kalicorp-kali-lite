@@ -1,0 +1,29 @@
+# Build artifacts
+*.o
+*.pyc
+__pycache__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+ollama.log
+
+# Ollama local models (do not commit)
+~/.ollama/models/
+
+# Environment
+.env
+.env.local
+
+# Temporary
+tmp/
+temp/

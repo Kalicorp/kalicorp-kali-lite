@@ -81,7 +81,7 @@ Garder la structure actuelle (sections 0/6 — Prérequis, Ollama, Daemon, qwen3
 3. **Clear section comments** : `# ── SHARED ──`, `# ── LINUX-ONLY ──`, `# ── MACOS-ONLY ──`
 4. **Usage unchanged** :
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh | sudo bash
+   curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/install.sh | sudo bash
    ```
 
 ---
