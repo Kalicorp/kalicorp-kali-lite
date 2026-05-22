@@ -1,75 +1,48 @@
-# kalicorp-hardening — Kali-lite v2
+# Kali-Lite — Le modèle frugal souverain de Kalicorp
 
-**LLM local multi-rôle — CLI & chatbot souverain**
+**Deux versions téléchargeables • Cross-platform • Ultra-frugales • 100 % local**
 
-Kali-Lite v2 est un LLM local multi-rôle — CLI et chatbot souverain — conçu pour travailler au plus près du système, sans déplacer vos données, vos habitudes ou votre environnement.
+![Kali-Lite](https://github.com/balduregates1/kalicorp-hardening/blob/main/assets/kali-lite-banner.png)
 
-## Architecture
+**Kali-Lite** est le modèle IA local made in Kalicorp : souverain, frugal et conçu pour tourner sur du matériel modeste tout en respectant RGPD / AI Act.
 
-- **Moteur** : qwen3.5:9b (vision, custom local) via Ollama
-- **Interface** : Claude Code v2+ — proxy Ollama local au format API Anthropic
-- **Identité** : gravée dans un Modelfile + CLAUDE.md
-- **Données** : sur site uniquement — aucune extraction
-- **API** : `ANTHROPIC_BASE_URL=http://localhost:11434`
+### Les deux versions disponibles
 
-## Installation
+| Version              | Moteur              | VRAM requise | Vision | Cas d’usage principal                  | Taille modèle |
+|----------------------|---------------------|--------------|--------|----------------------------------------|---------------|
+| **Kali-Lite**        | Qwen3 8B            | **~8 Go**    | Non    | Chat rapide, code, assistance système  | ~5,2 Go      |
+| **Kali-Lite v2**     | Qwen3.5 9B          | **~10 Go**   | Oui    | Analyse d’images + tout le reste       | ~6,8 Go      |
+
+### Pourquoi Kali-Lite ?
+- 100 % **local** → aucune donnée ne quitte ta machine
+- Identité Kalicorp gravée (Anima du Sanctuaire)
+- Compatible **Claude Code v2+** en local (proxy Anthropic)
+- Installation en une ligne sur Linux **et** macOS
+- Frugalité extrême : tourne même sur un laptop 8 Go VRAM
+
+### Installation ultra-simple (1 commande)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh | bash
-```
+# Kali-Lite (8 Go VRAM - sans vision)
+curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/auto-install-kali-lite-v1-novision.sh | bash
 
-~20 min. ~10 Go VRAM recommandés — 8 Go possibles avec contraintes selon usage.
+# Kali-Lite v2 (10 Go VRAM - avec vision)
+curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/auto-install-kali-lite-v2-vision.sh | bash
+Temps moyen : 15-20 minutes (le temps de télécharger le modèle via Ollama)
+Après installation
+Bashkali-lite          # lance directement l’interface Claude Code souverain
+ollama run kali-lite     # ou en mode chat pur
+Matériel testé et validé
 
-## Configurations
+Minimal : 8 Go VRAM + 16 Go RAM
+Recommandé : 10 Go+ VRAM + 32 Go RAM
+Testé sur : RTX 3080 8 Go, RTX 4070, Apple Silicon M1/M2/M3, Kali Linux, Ubuntu, macOS 11+
 
-| Config | GPU VRAM | RAM | CPU | OS |
-|---|---|---|---|---|
-| Minimale | 8 Go | 16 Go | 6 cœurs | Ubuntu 22.04+ |
-| Recommandée | 8 Go+ | 32 Go | 8 cœurs+ | Kali / Debian |
-| Testée | 8 Go RTX 3080 | 64 Go | i7-10750H 6c/12t | Kali Linux 6.18 |
-| macOS | 8 Go+ (Metal) | 16 Go | Apple Silicon / Intel | macOS 11+ |
+Licence & philosophie
 
-## Cas d'usage
+Licence : GPL-2.0 (redistribution libre)
+Pas de télémetry, pas de cloud, pas de backdoor
+Conçu pour les makers, TPE, collectivités et passionnés de souveraineté numérique
 
-- environnement IA local pour développeurs
-- assistance système et diagnostic Linux
-- analyse d'images locale
-- workflow Claude Code souverain
-- poste IA compatible RGPD / AI Act
-- laboratoire IA personnel ou PME
-
-## Ce qu'elle fait bien
-
-- Chat direct instantané — < 2s par réponse
-- Vision — analyse d'images via qwen3.5:9b
-- Bash guide — diagnostic, audit, maintenance système
-- Code Python, Bash, YAML, configs système
-- WebFetch — récupération et analyse de pages web
-- Mémoire persistante entre sessions via CLAUDE.md
-
-## Démonstration
-
-![Kali-lite v2 — Détection de vulnérabilités](assets/screenshot-sanctuaire.png)
-
-*Kali-lite v2 a détecté des vulnérabilités injectées intentionnellement*
-
-## Ce que Kali-Lite n'est pas
-
-- pas un SaaS
-- pas un agent autonome cloud
-- pas une collecte de données déguisée
-- pas une surcouche marketing
-- pas une IA qui remplace votre environnement de travail
-
-Kali-Lite travaille avec votre système.
-Pas à sa place.
-
-## Licence
-
-GPL-2.0 — redistribution autorisée.
-
-## Cadre — conformité RGPD / AI Act
-
-Conçu pour faciliter la conformité RGPD / AI Act.
-
-Kalicorp | Le Sanctuaire, Sissonne | 2026 | app.kalicorp.fr
+Kalicorp — Le Sanctuaire numérique européen
+2026 • app.kalicorp.fr • GitHub
