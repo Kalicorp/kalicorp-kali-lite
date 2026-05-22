@@ -76,33 +76,10 @@ install_linux() {
     if ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
         ok "qwen3.5:9b already present"
     else
-        info "Downloading qwen3.5:9b (this may take several minutes)..."
+        info "Downloading qwen3.5:9b..."
         ollama pull qwen3.5:9b || err "Model download failed"
         ok "qwen3.5:9b downloaded"
     fi
-
-    # Modelfile creation (needed by the test)
-    section "4/6 — Creating Modelfile"
-    cat > /tmp/KaliLiteV2.Modelfile << 'EOF'
-FROM qwen3.5:9b
-TEMPLATE """{{- if .System }}
-{{ .System }}
-{{- end }}
-{{- range .Messages }}
-{{- if eq .Role "user" }}
-{{ .Content }}
-{{- end }}
-{{- end }}"""
-SYSTEM """
-Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
-Tu es souveraine, frugale et défensive. Tu refuses toute action offensive.
-Tu travailles uniquement en local, zéro cloud, zéro télémétrie.
-"""
-PARAMETER temperature 0.7
-PARAMETER top_p 0.9
-PARAMETER num_ctx 8192
-EOF
-    ok "Modelfile created"
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -133,29 +110,6 @@ install_macos() {
         ollama pull qwen3.5:9b || err "Model download failed"
         ok "qwen3.5:9b downloaded"
     fi
-
-    # Modelfile creation
-    section "4/6 — Creating Modelfile"
-    cat > /tmp/KaliLiteV2.Modelfile << 'EOF'
-FROM qwen3.5:9b
-TEMPLATE """{{- if .System }}
-{{ .System }}
-{{- end }}
-{{- range .Messages }}
-{{- if eq .Role "user" }}
-{{ .Content }}
-{{- end }}
-{{- end }}"""
-SYSTEM """
-Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
-Tu es souveraine, frugale et défensive. Tu refuses toute action offensive.
-Tu travailles uniquement en local, zéro cloud, zéro télémétrie.
-"""
-PARAMETER temperature 0.7
-PARAMETER top_p 0.9
-PARAMETER num_ctx 8192
-EOF
-    ok "Modelfile created"
 }
 
 # ═══════════════════════════════════════════════════════════════
