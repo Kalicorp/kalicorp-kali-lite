@@ -63,7 +63,6 @@ info "Home : $REAL_HOME"
 install_linux() {
     section "Linux Setup — Ollama + qwen3.5:9b (Vision)"
 
-    # 1. Ollama
     section "1/6 — Ollama"
     if command -v ollama &>/dev/null; then
         ok "Ollama already installed"
@@ -73,15 +72,9 @@ install_linux() {
         ok "Ollama installed"
     fi
 
-    # 2. Ollama daemon
     section "2/6 — Ollama Daemon"
     sudo mkdir -p /var/log/kalicorp
-    if command -v systemctl &>/dev/null; then
-        sudo systemctl enable --now ollama 2>/dev/null || true
-        sleep 2
-    fi
 
-    # 3. Model
     section "3/6 — Model qwen3.5:9b (Vision)"
     if ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
         ok "qwen3.5:9b already present"
@@ -103,7 +96,6 @@ install_macos() {
     fi
     ok "Homebrew detected"
 
-    # 1. Ollama
     section "1/6 — Ollama"
     if command -v ollama &>/dev/null; then
         ok "Ollama already installed"
@@ -113,12 +105,10 @@ install_macos() {
         ok "Ollama installed"
     fi
 
-    # 2. Ollama daemon
     section "2/6 — Ollama Daemon"
     brew services start ollama 2>/dev/null || true
     sleep 2
 
-    # 3. Model
     section "3/6 — Model qwen3.5:9b (Vision)"
     if ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
         ok "qwen3.5:9b already present"
