@@ -6,12 +6,12 @@ Cross-platform installer for **Kali-Lite**, a sovereign, local-first AI assistan
 
 ### Linux (Kali, Debian, Ubuntu, Arch)
 ```bash
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh)
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/install.sh)
 ```
 
 ### macOS (Intel / Apple Silicon)
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/install.sh)
 ```
 
 **Note:** macOS does **not** require `sudo` — Homebrew refuses to run as root.

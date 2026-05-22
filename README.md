@@ -34,13 +34,13 @@ Deux versions selon tes besoins :
 ### Kali-Lite (8 Go VRAM — sans vision)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/auto-install-kali-lite-v1-novision.sh | bash
+curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh | bash
 ```
 
 ### Kali-Lite v2 (10 Go VRAM — avec vision)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-hardening/main/auto-install-kali-lite-v2-vision.sh | bash
+curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh | bash
 ```
 
 > **Temps moyen** : 15-20 min (téléchargement du modèle inclus)

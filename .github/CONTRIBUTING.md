@@ -15,8 +15,8 @@ Kali-Lite est un projet de **cyberdéfense souveraine**. Les contributions doive
 ### 1. Fork & branche
 
 ```bash
-git clone https://github.com/<votre-username>/kalicorp-hardening.git
-cd kalicorp-hardening
+git clone https://github.com/<votre-username>/kalicorp-kali-lite.git
+cd kalicorp-kali-lite
 git checkout -b feature/<nom>
 ```
 
@@ -43,7 +43,7 @@ git checkout -b feature/<nom>
 
 ## 🐛 Signaler un bug
 
-Utilisez les [GitHub Issues](https://github.com/balduregates1/kalicorp-hardening/issues) avec le template `bug_report`.
+Utilisez les [GitHub Issues](https://github.com/balduregates1/kalicorp-kali-lite/issues) avec le template `bug_report`.
 
 ## 💡 Suggestions
 
