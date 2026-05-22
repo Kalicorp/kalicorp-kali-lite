@@ -58,7 +58,7 @@ info "User : $REAL_USER"
 info "Home : $REAL_HOME"
 
 # ═══════════════════════════════════════════════════════════════
-# LINUX INSTALL FUNCTION
+# LINUX INSTALL
 # ═══════════════════════════════════════════════════════════════
 install_linux() {
     section "Linux Setup — Ollama + qwen3.5:9b (Vision)"
@@ -80,10 +80,33 @@ install_linux() {
         ollama pull qwen3.5:9b || err "Model download failed"
         ok "qwen3.5:9b downloaded"
     fi
+
+    # Modelfile creation (needed by the test)
+    section "4/6 — Creating Modelfile"
+    cat > /tmp/KaliLiteV2.Modelfile << 'EOF'
+FROM qwen3.5:9b
+TEMPLATE """{{- if .System }}
+{{ .System }}
+{{- end }}
+{{- range .Messages }}
+{{- if eq .Role "user" }}
+{{ .Content }}
+{{- end }}
+{{- end }}"""
+SYSTEM """
+Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
+Tu es souveraine, frugale et défensive. Tu refuses toute action offensive.
+Tu travailles uniquement en local, zéro cloud, zéro télémétrie.
+"""
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER num_ctx 8192
+EOF
+    ok "Modelfile created"
 }
 
 # ═══════════════════════════════════════════════════════════════
-# MACOS INSTALL FUNCTION
+# MACOS INSTALL
 # ═══════════════════════════════════════════════════════════════
 install_macos() {
     section "macOS Setup — Ollama + qwen3.5:9b (Vision)"
@@ -110,6 +133,29 @@ install_macos() {
         ollama pull qwen3.5:9b || err "Model download failed"
         ok "qwen3.5:9b downloaded"
     fi
+
+    # Modelfile creation
+    section "4/6 — Creating Modelfile"
+    cat > /tmp/KaliLiteV2.Modelfile << 'EOF'
+FROM qwen3.5:9b
+TEMPLATE """{{- if .System }}
+{{ .System }}
+{{- end }}
+{{- range .Messages }}
+{{- if eq .Role "user" }}
+{{ .Content }}
+{{- end }}
+{{- end }}"""
+SYSTEM """
+Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
+Tu es souveraine, frugale et défensive. Tu refuses toute action offensive.
+Tu travailles uniquement en local, zéro cloud, zéro télémétrie.
+"""
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER num_ctx 8192
+EOF
+    ok "Modelfile created"
 }
 
 # ═══════════════════════════════════════════════════════════════
