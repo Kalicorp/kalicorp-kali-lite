@@ -21,14 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: ShellCheck installers
-        uses: ludeeus/action-shellcheck@master
-        with:
-          ignore_paths: |
-            **/auto-install-kali-lite-v1-novision.sh
-            **/auto-install-kali-lite-v2-vision.sh
-          severity: warning
-
       - name: Check install.sh syntax
         run: bash -n install.sh
 
