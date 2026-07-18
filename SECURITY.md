@@ -43,7 +43,7 @@ Kali-Lite est conçu avec les principes suivants :
 
 1. **Zéro télémétrie** — aucune donnée sortante par défaut
 2. **Exécution locale uniquement** — aucun cloud requis ni imposé
-3. **Pas d'exécution de code distant automatique** — le script d'installation appelle des installateurs officiels (Ollama, NodeSource/Homebrew) mais ne télécharge jamais de binaire tiers inconnu
+3. **Dépendances identifiées** — l'installation peut télécharger et exécuter les installateurs officiels d'Ollama, NodeSource ou Homebrew. La méthode recommandée permet de lire et vérifier le script Kalicorp avant son exécution.
 4. **Transparence du modèle** — provenance Qwen documentée dans MODEL-CARD.md
 
 ## Security Updates

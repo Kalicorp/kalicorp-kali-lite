@@ -124,6 +124,8 @@ curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/au
 | [INSTALLATION.md](INSTALLATION.md) | Guide d'installation détaillé |
 | [REFACTOR_BRIEF.md](REFACTOR_BRIEF.md) | Architecture du script d'installation |
 | [MODEL-CARD.md](MODEL-CARD.md) | Fiche technique du modèle (Hugging Face style) |
+| [SECURITY.md](SECURITY.md) | Politique de sécurité et divulgation responsable |
+| [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des scripts d'installation |
 | [LICENSE](LICENSE) | GPL-2.0 |
 
 ---

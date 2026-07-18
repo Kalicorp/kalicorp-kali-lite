@@ -359,9 +359,9 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 - Interlocuteur principal : utilisateur local (configurable)
 
 ## Infrastructure
-- Machine : {{HOSTNAME}} (détecté à l'installation, sinon "non détecté")
-- GPU : {{GPU_NAME}} (détecté à l'installation, sinon "CPU mode")
-- OS : {{OS_NAME}} (détecté à l'installation)
+- Machine : environnement local de l'utilisateur
+- Accélération : GPU ou CPU selon la configuration locale
+- OS : système local détecté par l'installateur
 - Stack : Ollama · modèle local souverain
 - Relais distant : désactivé par défaut — configuration explicite requise
 
@@ -485,9 +485,9 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 - Interlocuteur principal : utilisateur local (configurable)
 
 ## Infrastructure
-- Machine : {{HOSTNAME}} (détecté à l'installation, sinon "non détecté")
-- GPU : {{GPU_NAME}} (détecté à l'installation, sinon "CPU mode")
-- OS : {{OS_NAME}} (détecté à l'installation)
+- Machine : environnement local de l'utilisateur
+- Accélération : GPU ou CPU selon la configuration locale
+- OS : système local détecté par l'installateur
 - Stack : Ollama · modèle local souverain
 - Relais distant : désactivé par défaut — configuration explicite requise
 

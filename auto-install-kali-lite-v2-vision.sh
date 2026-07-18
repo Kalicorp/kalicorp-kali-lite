@@ -183,14 +183,35 @@ install_linux() {
 
     # ── 4. Kali-Lite v2 custom model via Modelfile ──
     section "4/6 — Kali-Lite v2 custom model (Modelfile)"
+
+    TMPFILE=""
+    cleanup_tmpfile() { [[ -n "$TMPFILE" && -f "$TMPFILE" ]] && rm -f "$TMPFILE"; }
+    trap cleanup_tmpfile EXIT INT TERM
+
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     MODELFILE_PATH="${SCRIPT_DIR}/Modelfile"
     if [[ -f "$MODELFILE_PATH" ]]; then
-        info "Building Kali-Lite v2 from Modelfile..."
-        ollama create kali-lite-v2 "$MODELFILE_PATH" || warn "Modelfile build failed — using base qwen3.5:9b"
-        ok "kali-lite-v2 model built from Modelfile"
+        info "Building Kali-Lite v2 from local Modelfile..."
+        if ! ollama create kali-lite-v2 "$MODELFILE_PATH"; then
+            err "Local Modelfile build failed — aborting model creation"
+        fi
+        ok "kali-lite-v2 created from local Modelfile"
     else
-        warn "Modelfile not found at $MODELFILE_PATH — skipping custom model build"
+        info "No local Modelfile found at $MODELFILE_PATH — downloading from repository..."
+
+        TMPFILE="$(mktemp /tmp/kalicorp-modelfile.XXXXXX)" || err "Failed to create temp file for Modelfile download"
+
+        if ! curl -fsSL --max-time 30 \
+            -o "$TMPFILE" \
+            https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/Modelfile; then
+            warn "GitHub raw fetch failed — falling back to base qwen3.5:9b without custom model"
+        elif ! ollama create kali-lite-v2 -f "$TMPFILE"; then
+            err "ollama create from downloaded Modelfile failed — aborting model creation"
+        else
+            ok "kali-lite-v2 created from remote Modelfile (URL verified)"
+        fi
+
+        # trap will clean up $TMPFILE on exit
     fi
 
     # ── 5. Node.js + npm ──
@@ -275,14 +296,35 @@ install_macos() {
 
     # ── 4. Kali-Lite v2 custom model via Modelfile ──
     section "4/6 — Kali-Lite v2 custom model (Modelfile)"
+
+    TMPFILE=""
+    cleanup_tmpfile() { [[ -n "$TMPFILE" && -f "$TMPFILE" ]] && rm -f "$TMPFILE"; }
+    trap cleanup_tmpfile EXIT INT TERM
+
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     MODELFILE_PATH="${SCRIPT_DIR}/Modelfile"
     if [[ -f "$MODELFILE_PATH" ]]; then
-        info "Building Kali-Lite v2 from Modelfile..."
-        ollama create kali-lite-v2 "$MODELFILE_PATH" || warn "Modelfile build failed — using base qwen3.5:9b"
-        ok "kali-lite-v2 model built from Modelfile"
+        info "Building Kali-Lite v2 from local Modelfile..."
+        if ! ollama create kali-lite-v2 "$MODELFILE_PATH"; then
+            err "Local Modelfile build failed — aborting model creation"
+        fi
+        ok "kali-lite-v2 created from local Modelfile"
     else
-        warn "Modelfile not found at $MODELFILE_PATH — skipping custom model build"
+        info "No local Modelfile found at $MODELFILE_PATH — downloading from repository..."
+
+        TMPFILE="$(mktemp /tmp/kalicorp-modelfile.XXXXXX)" || err "Failed to create temp file for Modelfile download"
+
+        if ! curl -fsSL --max-time 30 \
+            -o "$TMPFILE" \
+            https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/Modelfile; then
+            warn "GitHub raw fetch failed — falling back to base qwen3.5:9b without custom model"
+        elif ! ollama create kali-lite-v2 -f "$TMPFILE"; then
+            err "ollama create from downloaded Modelfile failed — aborting model creation"
+        else
+            ok "kali-lite-v2 created from remote Modelfile (URL verified)"
+        fi
+
+        # trap will clean up $TMPFILE on exit
     fi
 
     # ── 5. Node.js + npm ──
@@ -303,5 +345,5 @@ else
 fi
 
 ok "V2 (qwen3.5:9b + Vision) setup complete!"
-ok "Run: ollama list | grep qwen3.5"
-ok "Start with: ollama run kali-lite-v2"
+info "Verify model status:"
+echo "  ollama list | grep kali-lite-v2"
