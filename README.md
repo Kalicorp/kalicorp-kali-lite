@@ -29,7 +29,30 @@ Deux versions selon tes besoins :
 
 ---
 
-## ⚡ Installation en 2 commandes
+## ⚡ Installation
+
+### Méthode recommandée — vérification avant exécution
+
+Télécharge le script, vérifie son empreinte SHA-256 publiée dans ce dépôt, lis-le, puis exécute-le localement.
+
+```bash
+# 1. Télécharger
+curl -fsSL -o install.sh https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh
+
+# 2. Vérifier l'empreinte (comparer avec SHA-256 publié dans ce dépôt)
+sha256sum install.sh
+
+# 3. Lire le script avant exécution
+less install.sh
+
+# 4. Exécuter localement
+bash install.sh   # macOS — sans sudo
+sudo bash install.sh  # Linux — nécessite root
+```
+
+### Méthode rapide (pipe) — pour usage répété et confiance établie
+
+> **Note** : Cette méthode télécharge et exécute un script distant en une commande. Elle appelle les installateurs officiels d'Ollama et, selon le système, de NodeSource ou Homebrew. Utilise-la uniquement si tu as déjà vérifié l'intégrité du script.
 
 ### Kali-Lite (8 Go VRAM — sans vision)
 
@@ -55,7 +78,7 @@ curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/au
 - **Compatible Claude Code v2+** en local (proxy Anthropic)
 - **Cross-platform** — Linux (Kali/Debian/Ubuntu/Arch) + macOS (Intel/Apple Silicon)
 - **Frugalité extrême** — tourne sur laptop 8 Go VRAM
-- **Conforme RGPD / AI Act** — zéro télémétrie, zéro cloud
+- **RGPD & AI Act** — conçu pour faciliter un déploiement local et la maîtrise des données. La conformité complète dépend du contexte d'utilisation, de la gouvernance et des obligations applicables à l'opérateur.
 
 ---
 
