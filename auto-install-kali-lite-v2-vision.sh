@@ -192,7 +192,7 @@ install_linux() {
     MODELFILE_PATH="${SCRIPT_DIR}/Modelfile"
     if [[ -f "$MODELFILE_PATH" ]]; then
         info "Building Kali-Lite v2 from local Modelfile..."
-        if ! ollama create kali-lite-v2 "$MODELFILE_PATH"; then
+        if ! ollama create kali-lite-v2 -f "$MODELFILE_PATH"; then
             err "Local Modelfile build failed — aborting model creation"
         fi
         ok "kali-lite-v2 created from local Modelfile"
@@ -204,11 +204,11 @@ install_linux() {
         if ! curl -fsSL --max-time 30 \
             -o "$TMPFILE" \
             https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/Modelfile; then
-            warn "GitHub raw fetch failed — falling back to base qwen3.5:9b without custom model"
+            err "GitHub raw fetch failed — kali-lite-v2 was not created"
         elif ! ollama create kali-lite-v2 -f "$TMPFILE"; then
             err "ollama create from downloaded Modelfile failed — aborting model creation"
         else
-            ok "kali-lite-v2 created from remote Modelfile (URL verified)"
+            ok "kali-lite-v2 created from downloaded official Modelfile"
         fi
 
         # trap will clean up $TMPFILE on exit
@@ -305,7 +305,7 @@ install_macos() {
     MODELFILE_PATH="${SCRIPT_DIR}/Modelfile"
     if [[ -f "$MODELFILE_PATH" ]]; then
         info "Building Kali-Lite v2 from local Modelfile..."
-        if ! ollama create kali-lite-v2 "$MODELFILE_PATH"; then
+        if ! ollama create kali-lite-v2 -f "$MODELFILE_PATH"; then
             err "Local Modelfile build failed — aborting model creation"
         fi
         ok "kali-lite-v2 created from local Modelfile"
@@ -317,11 +317,11 @@ install_macos() {
         if ! curl -fsSL --max-time 30 \
             -o "$TMPFILE" \
             https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/Modelfile; then
-            warn "GitHub raw fetch failed — falling back to base qwen3.5:9b without custom model"
+            err "GitHub raw fetch failed — kali-lite-v2 was not created"
         elif ! ollama create kali-lite-v2 -f "$TMPFILE"; then
             err "ollama create from downloaded Modelfile failed — aborting model creation"
         else
-            ok "kali-lite-v2 created from remote Modelfile (URL verified)"
+            ok "kali-lite-v2 created from downloaded official Modelfile"
         fi
 
         # trap will clean up $TMPFILE on exit
