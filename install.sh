@@ -255,7 +255,7 @@ setup_alias() {
     fi
   fi
 
-  cat >> "$SHELL_RC" <<ALIASBLOCK
+  cat >> "$SHELL_RC" <<'ALIASBLOCK'
 
 # kali-lite alias (mode sécurisé — permissions demandées par défaut)
 alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 claude'
@@ -361,11 +361,30 @@ install_linux() {
 
   # Prérequis Linux — sudo optionnel (seules les commandes système en nécessitent)
   local NEEDS_SUDO=0
-  if [[ $EUID -ne 0 ]] && ! command -v systemctl &>/dev/null; then
+
+  if [[ $EUID -eq 0 ]]; then
+    # Exécution directe en root : on utilise SUDO_USER si dispo, sinon erreur
+    if [[ -n "${SUDO_USER:-}" ]]; then
+      REAL_USER="$SUDO_USER"
+      REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6) || { err "Impossible de résoudre le home de $REAL_USER"; exit 1; }
+      NEEDS_SUDO=1
+    else
+      warn "⚠️ Exécution en root sans SUDO_USER — les fichiers seront créés dans /root"
+      REAL_USER="root"
+      REAL_HOME="/root"
+      # On force le shell RC vers un chemin accessible même depuis /root
+      if [[ -z "$SHELL_RC" || ! -f "$SHELL_RC" ]]; then
+        SHELL_RC="$REAL_HOME/.bashrc"
+        touch "$SHELL_RC" 2>/dev/null || { err "Impossible de créer $SHELL_RC en root"; exit 1; }
+      fi
+    fi
+  elif [[ $EUID -ne 0 ]] && ! command -v systemctl &>/dev/null; then
     info "sudo non détecté et systemctl absent : Ollama sera lancé en mode utilisateur"
-  elif [[ $EUID -eq 0 ]]; then
-    NEEDS_SUDO=1
-    warn "⚠️ Exécution en root détectée — les commandes système seront elevées via sudo -u $REAL_USER"
+  else
+    # Non-root avec sudo disponible — vérifie qu'on peut utiliser sudo
+    if [[ $EUID -ne 0 ]] && ! sudo -n true &>/dev/null; then
+      warn "⚠️ sudo requis mais mot de passe demandé — l'installation pourrait bloquer"
+    fi
   fi
 
   local MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
@@ -396,9 +415,14 @@ install_linux() {
   # --- 2. Démarrage daemon Ollama ---
   section "2 — Daemon Ollama"
   if [[ $NEEDS_SUDO -eq 1 ]] && command -v systemctl &>/dev/null; then
-    sudo systemctl enable ollama 2>/dev/null || true
-    sudo systemctl start ollama
-    ok "Service Ollama démarré (via systemd)"
+    sudo -u "$REAL_USER" systemctl --user enable ollama 2>/dev/null || true
+    sudo -u "$REAL_USER" systemctl --user start ollama 2>/dev/null || {
+      warn "systemd user service échoué — fallback nohup..."
+      local tmp_pid_dir="$HOME/.local/share/kalicorp-ollama"
+      mkdir -p "$tmp_pid_dir"
+      sudo -u "$REAL_USER" bash -c "nohup ollama serve > $LOG_DIR/ollama.log 2>&1 & echo \$! > /var/run/kalicorp-ollama.pid" || true
+    }
+    ok "Service Ollama démarré (via systemd user, sudo)"
   elif command -v systemctl &>/dev/null; then
     info "Activation du service Ollama via systemctl..."
     systemctl enable ollama 2>/dev/null || true
@@ -574,29 +598,47 @@ dry_run() {
   info "Utilisateur réel : $REAL_USER ($REAL_HOME)"
   info "Shell RC : $SHELL_RC"
 
+  local ollama_status gpu_status node_status brew_status
+  if command -v ollama &>/dev/null; then
+    ollama_status="déjà installé ($(ollama --version 2>/dev/null))"
+  else
+    ollama_status="sera téléchargé via curl (Linux) / brew install (macOS)"
+  fi
+
+  gpu_status=$(command -v nvidia-smi &>/dev/null && echo 'NVIDIA détecté' || echo 'CPU mode')
+
   if [[ "$OS_TYPE" == "linux" ]]; then
     local MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
-    info "[1] Ollama → $(command -v ollama &>/dev/null && 'déjà installé' || 'sera téléchargé via curl')"
+    info "[1] Ollama → $ollama_status"
     info "[2] Daemon Ollama → systemd ou nohup (PID: /var/run/kalicorp-ollama.pid)"
     info "[3] Modèle qwen3:8b (~5.2 Go) → sera pull"
-    info "[4] GPU → $(command -v nvidia-smi &>/dev/null && 'NVIDIA détecté' || 'CPU mode')"
+    info "[4] GPU → $gpu_status"
     info "[5] Modelfile → $MODELFILE_PATH (création)"
     info "[6] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md (backup si existant + écriture atomique)"
-    info "[7] Claude Code → npm install -g @anthropic-ai/claude-code"
+    node_status=$(command -v npm &>/dev/null && echo 'déjà installé' || echo 'sera installé via apt')
+    info "[7] Claude Code → npm install -g @anthropic-ai/claude-code ($node_status)"
     info "[8] Alias kali-lite → injecté dans $SHELL_RC"
   else
     local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
-    info "[1] Ollama → $(command -v ollama &>/dev/null && 'déjà installé' || 'sera brew install')"
+    gpu_status=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs || echo 'non détecté (Metal/CPU)')
+    info "[4] GPU → ${gpu_status:-non détecté}"
+
+    node_status=$(command -v npm &>/dev/null && echo 'déjà installé' || echo 'sera brew install via Homebrew')
+    if command -v brew &>/dev/null; then
+      brew_status="Homebrew disponible"
+    else
+      brew_status="⚠️ Homebrew requis mais non détecté — installation manuelle nécessaire"
+    fi
+
+    info "[1] Ollama → $ollama_status"
     info "[2] Daemon Ollama → brew services ou nohup (PID: $REAL_HOME/Library/kalicorp/ollama.pid)"
-    info "[3] Modèle qwen3:8b (~5.2 Go) → sera pull"
-    local gpu_info
-    gpu_info=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs)
-    info "[4] GPU → ${gpu_info:-non détecté (Metal/CPU)}"
-    info "[5] Node.js → $(command -v node &>/dev/null && 'déjà installé' || 'sera brew install')"
+    info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
+    info "[4] GPU → ${gpu_status:-non détecté}"
+    info "[5] Node.js → $node_status ($brew_status)"
     info "[6] Modelfile → $MODELFILE_PATH (création)"
     info "[7] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
-    info "[8] Claude Code → npm install -g @anthropic-ai/claude-code"
-    info "[9] Alias kali-lite → injecté dans $SHELL_RC"
+    info "[8] Claude Code → npm install -g @anthropic-ai/claude-code ($node_status)"
+    info "[9] Alias kali-lite-v2 → injecté dans $SHELL_RC"
   fi
 
   echo ""
