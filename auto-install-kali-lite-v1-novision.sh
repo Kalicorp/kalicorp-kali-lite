@@ -48,12 +48,14 @@ esac
 # ═══════════════════════════════════════════════════════════════
 section "0/6 — Prerequisites"
 
-# ── LINUX-ONLY: sudo check ──
+# ── LINUX-ONLY: sudo check (priorité #7 : privilèges réduits) ──
 if [[ $IS_LINUX -eq 1 ]]; then
-    [[ $EUID -ne 0 ]] && err "Linux requires sudo: sudo bash install.sh"
+    if [[ $EUID -ne 0 ]]; then
+        err "Linux requires root for system install. Use: sudo bash <(curl ...)"
+    fi
 fi
 
-# ── MACOS-ONLY: warn about sudo ──
+# ── MACOS-ONLY: warn about sudo (priorité #7) ──
 if [[ $IS_MACOS -eq 1 ]]; then
     if [[ $EUID -eq 0 ]]; then
         err "macOS: Do NOT run with sudo — Homebrew refuses root. Use: bash install.sh"
@@ -61,6 +63,44 @@ if [[ $IS_MACOS -eq 1 ]]; then
 fi
 
 command -v curl &>/dev/null || err "curl required — install and retry"
+
+# ── SÉCURITÉ : téléchargement sécurisé (priorité #2) ────────────────────────
+
+TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+
+safe_download() {
+  local url="$1"
+  local dest="$2"
+  local expected_sha256="${3:-}"
+  local max_time=60
+
+  if ! curl -fsSL --connect-timeout 15 --max-time "$max_time" \
+       -o "${dest}.tmp" "$url"; then
+    err "Téléchargement sécurisé échoué : $url"
+  fi
+
+  if [[ -n "$expected_sha256" ]]; then
+    local actual_sha256
+    actual_sha256="$(sha256sum "${dest}.tmp" | awk '{print $1}')"
+    if [[ "$actual_sha256" != "$expected_sha256" ]]; then
+      rm -f "${dest}.tmp"
+      err "Intégrité compromise : checksum mismatch pour $(basename "$url")"
+    fi
+  fi
+
+  mv "${dest}.tmp" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
+  chmod 0644 "$dest"
+}
+
+safe_download_exec() {
+  local url="$1"
+  local expected_sha256="${2:-}"
+  local tmp_script="${TMP_DOWNLOAD_DIR}/dl-script-$$"
+
+  safe_download "$url" "$tmp_script" "$expected_sha256"
+  bash "$tmp_script" || err "Exécution du script téléchargé échouée : $url"
+}
 
 # ── SHARED: User context ──
 REAL_USER="${SUDO_USER:-${USER:-$(whoami)}}"
@@ -91,17 +131,15 @@ if [[ $IS_MACOS -eq 1 ]]; then
     fi
 fi
 
-# ── SHARED: Personal Claude config detection ──
-PERSO_KEY=""
+# ── SHARED: Personal Claude config detection (priorité #5 : jamais de valeur en clair) ──
 PERSO_FOUND=0
 if [[ -f "$SHELL_RC" ]]; then
-    PERSO_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null | grep -v '=ollama' | head -1 | sed 's/^export ANTHROPIC_API_KEY=//' | tr -d '"' || true)
-fi
-if [[ -n "$PERSO_KEY" ]]; then
-    PERSO_FOUND=1
-    warn "Personal Claude config detected — will preserve"
-else
-    ok "No personal Claude config — clean install"
+    if grep -q "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null; then
+        PERSO_FOUND=1
+        warn "Personal Claude config detected — will preserve (valeur non lue)"
+    else
+        ok "No personal Claude config — clean install"
+    fi
 fi
 
 # ═══════════════════════════════════════════════════════════════
@@ -127,7 +165,7 @@ install_linux() {
         ok "Ollama present: $(ollama --version 2>/dev/null)"
     else
         info "Installing Ollama..."
-        curl -fsSL https://ollama.com/install.sh | sh || err "Ollama installation failed"
+        safe_download_exec "https://ollama.com/install.sh" || err "Ollama installation failed"
         ok "Ollama installed"
     fi
 
@@ -184,7 +222,7 @@ install_linux() {
     info "Checking Node.js..."
     if ! command -v npm &>/dev/null; then
         info "npm not found — installing Node.js LTS..."
-        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+        safe_download_exec "https://deb.nodesource.com/setup_lts.x" || err "NodeSource setup failed"
         sudo apt-get install -y nodejs
     fi
 }
@@ -276,9 +314,11 @@ setup_modelfile() {
 
     if [[ $IS_LINUX -eq 1 ]]; then
         MODELFILE_DIR="/etc/kalicorp"
-        sudo mkdir -p "$MODELFILE_DIR"
+        sudo mkdir -p "$MODELFILE_DIR" || err "mkdir /etc/kalicorp failed"
+        # Fix ownership to SUDO_USER (priorité #7)
+        chown "${SUDO_USER:-root}:${SUDO_USER:-root}" "$MODELFILE_DIR" 2>/dev/null || true
         MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite"
-        # Write as root, then fix permissions
+        # Write as root, then fix permissions to 0644 (priorité #8)
         sudo tee "$MODELFILE_PATH" > /dev/null <<'MODELFILE_EOF'
 FROM qwen3:8b
 
@@ -635,7 +675,33 @@ inject_alias() {
 
 # ── Kalicorp — Kali-Lite V1 · Alias (personal config preserved) ──
 export CLAUDE_TELEMETRY=false
-alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
+alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
+alias kali-lite-autonome='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
+
+# kali-lite-hardcore (mode sans permissions — activation manuelle requise)
+kali-lite-hardcore() {
+  echo -e "${YELLOW}[!]${NC} Mode hardcore activé — permissions désactivées" >&2
+  ANTHROPIC_BASE_URL=http://localhost:11434 \
+    ANTHROPIC_API_KEY=ollama \
+    ANTHROPIC_MODEL=kali-lite:latest \
+    CLAUDE_CODE_DISABLE_TELEMETRY=1 \
+    DISABLE_AUTOUPDATER=1 \
+    DO_NOT_TRACK=1 \
+    claude --dangerously-skip-permissions "$@"
+}
+
+# Activation hardcore (demande confirmation interactive)
+kali-lite-enable-hardcore() {
+  echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
+  read -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
+  if [[ "$confirm" != [Oo] ]]; then
+    echo "Annulé."
+    return 1
+  fi
+  export KALI_LITE_HARDCORE=1
+  kali-lite-hardcore "$@"
+}
+
 # ── End Kalicorp ──
 ALIASES
     else
@@ -643,13 +709,39 @@ ALIASES
 
 # ── Kalicorp — Kali-Lite V1 · Alias (clean install) ──
 export CLAUDE_TELEMETRY=false
-alias kali-lite='ANTHROPIC_AUTH_TOKEN="" ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude --dangerously-skip-permissions'
+alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
+alias kali-lite-autonome='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
+
+# kali-lite-hardcore (mode sans permissions — activation manuelle requise)
+kali-lite-hardcore() {
+  echo -e "${YELLOW}[!]${NC} Mode hardcore activé — permissions désactivées" >&2
+  ANTHROPIC_BASE_URL=http://localhost:11434 \
+    ANTHROPIC_API_KEY=ollama \
+    ANTHROPIC_MODEL=kali-lite:latest \
+    CLAUDE_CODE_DISABLE_TELEMETRY=1 \
+    DISABLE_AUTOUPDATER=1 \
+    DO_NOT_TRACK=1 \
+    claude --dangerously-skip-permissions "$@"
+}
+
+# Activation hardcore (demande confirmation interactive)
+kali-lite-enable-hardcore() {
+  echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
+  read -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
+  if [[ "$confirm" != [Oo] ]]; then
+    echo "Annulé."
+    return 1
+  fi
+  export KALI_LITE_HARDCORE=1
+  kali-lite-hardcore "$@"
+}
+
 # ── End Kalicorp ──
 ALIASES
     fi
 
     chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
-    ok "Alias kali-lite injected into $SHELL_RC"
+    ok "Alias kali-lite injected into $SHELL_RC (mode sécurisé par défaut)"
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -699,8 +791,90 @@ print_summary() {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# ── DRY-RUN MODE ───────────────────────────────────────────────
+
+dry_run() {
+  section "DRY-RUN — Simulation (aucune modification)"
+  echo ""
+  info "OS détecté : $([ "$IS_LINUX" -eq 1 ] && echo 'Linux' || echo 'macOS')"
+  info "Utilisateur réel : $REAL_USER ($REAL_HOME)"
+  info "Shell RC : $SHELL_RC"
+
+  if [[ $IS_LINUX -eq 1 ]]; then
+    local MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
+    info "[1] Ollama → $(command -v ollama &>/dev/null && 'déjà installé' || 'sera téléchargé via curl')"
+    info "[2] Daemon Ollama → systemd ou nohup (PID: /var/run/kalicorp-ollama.pid)"
+    info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
+    info "[4] GPU → $(nvidia-smi &>/dev/null && 'NVIDIA détecté' || 'CPU mode')"
+    info "[5] Modelfile → $MODELFILE_PATH (création)"
+    info "[6] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
+    info "[7] Claude Code → npm install -g @anthropic-ai/claude-code"
+    info "[8] Alias kali-lite → injecté dans $SHELL_RC"
+  else
+    local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
+    info "[1] Ollama → $(command -v ollama &>/dev/null && 'déjà installé' || 'sera brew install')"
+    info "[2] Daemon Ollama → brew services ou nohup (PID: $REAL_HOME/Library/kalicorp/ollama.pid)"
+    info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
+    local gpu_info
+    gpu_info=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs || echo 'non détecté')
+    info "[4] GPU → ${gpu_info:-Metal/CPU}"
+    info "[5] Node.js → $(command -v node &>/dev/null && 'déjà installé' || 'sera brew install')"
+    info "[6] Modelfile → $MODELFILE_PATH (création)"
+    info "[7] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
+    info "[8] Claude Code → npm install -g @anthropic-ai/claude-code"
+    info "[9] Alias kali-lite → injecté dans $SHELL_RC"
+  fi
+
+  echo ""
+  ok "DRY-RUN terminé — aucune modification effectuée."
+  exit 0
+}
+
+# ═══════════════════════════════════════════════════════════════
+# ── UNINSTALL MODE ─────────────────────────────────────────────
+
+uninstall() {
+  section "UNINSTALL — Désinstallation Kali-Lite"
+
+  read -p "⚠️ Supprimer tous les artefacts Kali-Lite ? (o/N) " confirm || exit 0
+  [[ "$confirm" != [Oo] ]] && { warn "Désinstallation annulée."; exit 0; }
+
+  # --- Alias shell RC ---
+  info "Suppression des blocs d'alias de $SHELL_RC..."
+  grep -q "# kali-lite alias" "$SHELL_RC" 2>/dev/null && sed -i '/# kali-lite alias/,/# end kali-lite alias/d' "$SHELL_RC" && ok "Bloc 'kali-lite alias' supprimé" || true
+
+  # --- Modèle Ollama ---
+  ollama list 2>/dev/null | grep -q "kali-lite-v2" && { info "Suppression du modèle kali-lite-v2 d'Ollama..."; ollama rm kali-lite-v2 2>/dev/null || true; ok "Modèle Kali-Lite supprimé"; }
+
+  # --- Fichiers de configuration ---
+  if [[ $IS_LINUX -eq 1 ]]; then
+    for path in /etc/kalicorp/Modelfile.kali-lite; do
+      [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+    done
+  else
+    for path in "$REAL_HOME/.kalicorp/Modelfile.kali-lite"; do
+      [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+    done
+  fi
+
+  # CLAUDE.md — conservé par sécurité
+  [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]] && warn "~/.claude/CLAUDE.md conservé (backup recommandé)" || true
+
+  echo ""
+  ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."
+}
+
+# ═══════════════════════════════════════════════════════════════
 # MAIN DISPATCHER
 # ═══════════════════════════════════════════════════════════════
+
+if [[ "${1:-}" == "--dry-run" ]]; then detect_os; detect_real_user; dry_run; fi
+if [[ "${1:-}" == "--uninstall" ]]; then detect_os; detect_real_user; uninstall; fi
+
+# ── Mode normal : installation complète ────────────────────────
+detect_os
+detect_real_user
+
 if [[ $IS_LINUX -eq 1 ]]; then
     install_linux
 else
