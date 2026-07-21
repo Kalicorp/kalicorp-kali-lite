@@ -20,6 +20,10 @@
 
 **Kali-Lite** est la famille de modèles IA de **Kalicorp** : conçue pour tourner sur du matériel modeste, 100 % local, sans télémétrie, sans cloud, sans compromis sur la souveraineté des données.
 
+Kali-Lite ne cherche pas à masquer les limites physiques de l'IA locale. Si la machine souffle, chauffe ou ralentit, ce n'est pas un échec : c'est le coût matériel du calcul qui devient visible. Elle travaille avec les ressources disponibles, annonce ses limites et peut orienter l'utilisateur vers une infrastructure plus adaptée lorsque la tâche dépasse raisonnablement sa machine.
+
+La famille repose sur quatre couches séparables : **modèle de base**, **doctrine Kali-Lite**, **spécialité**, puis **harnais d'exécution**. Cette séparation permet de personnaliser une Anima sans réécrire tout le système ni perdre sa lisibilité.
+
 Deux versions selon tes besoins :
 
 | Version | Moteur | VRAM | Vision | Cas d'usage | Taille |
@@ -123,7 +127,10 @@ curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/au
 |---|---|
 | [INSTALLATION.md](INSTALLATION.md) | Guide d'installation détaillé |
 | [REFACTOR_BRIEF.md](REFACTOR_BRIEF.md) | Architecture du script d'installation |
-| [MODEL-CARD.md](MODEL-CARD.md) | Fiche technique du modèle (Hugging Face style) |
+| [MODEL-CARD.md](MODEL-CARD.md) | Fiche technique, usages prévus et limites |
+| [docs/WHY-KALI-LITE.md](docs/WHY-KALI-LITE.md) | Intention, posture et principes de conception |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Les quatre couches : base, doctrine, spécialité, harnais |
+| [templates/anima.template.md](templates/anima.template.md) | Gabarit de personnalisation d'une Anima |
 | [SECURITY.md](SECURITY.md) | Politique de sécurité et divulgation responsable |
 | [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des scripts d'installation |
 | [LICENSE](LICENSE) | GPL-2.0 |
