@@ -49,7 +49,7 @@ esac
 section "0/6 — Prerequisites"
 
 # ── LINUX-ONLY: sudo check (priorité #7 : privilèges réduits) ──
-if [[ $IS_LINUX -eq 1 ]]; then
+if [[ $IS_LINUX -eq 1 && "${1:-}" != "--dry-run" ]]; then
     if [[ $EUID -ne 0 ]]; then
         err "Linux requires root for system install. Use: sudo bash <(curl ...)"
     fi
@@ -66,8 +66,7 @@ command -v curl &>/dev/null || err "curl required — install and retry"
 
 # ── SÉCURITÉ : téléchargement sécurisé (priorité #2) ────────────────────────
 
-TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
-mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+# TMP_DIRECTORY — créé lazy uniquement lors d'un téléchargement réel (jamais en dry-run)
 
 safe_download() {
   local url="$1"
@@ -75,27 +74,42 @@ safe_download() {
   local expected_sha256="${3:-}"
   local max_time=60
 
+  # Création lazy du répertoire temporaire au premier appel
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  fi
+
+  local tmp_file="${dest}.tmp"
+
   if ! curl -fsSL --connect-timeout 15 --max-time "$max_time" \
-       -o "${dest}.tmp" "$url"; then
+       -o "${tmp_file}" "$url"; then
     err "Téléchargement sécurisé échoué : $url"
   fi
 
   if [[ -n "$expected_sha256" ]]; then
     local actual_sha256
-    actual_sha256="$(sha256sum "${dest}.tmp" | awk '{print $1}')"
+    actual_sha256="$(sha256sum "${tmp_file}" | awk '{print $1}')"
     if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-      rm -f "${dest}.tmp"
+      rm -f "${tmp_file}"
       err "Intégrité compromise : checksum mismatch pour $(basename "$url")"
     fi
   fi
 
-  mv "${dest}.tmp" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
+  mv "${tmp_file}" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
   chmod 0644 "$dest"
 }
 
 safe_download_exec() {
   local url="$1"
   local expected_sha256="${2:-}"
+
+  # Création lazy du répertoire temporaire au premier appel
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  fi
+
   local tmp_script="${TMP_DOWNLOAD_DIR}/dl-script-$$"
 
   safe_download "$url" "$tmp_script" "$expected_sha256"
@@ -104,7 +118,14 @@ safe_download_exec() {
 
 # ── SHARED: User context ──
 REAL_USER="${SUDO_USER:-${USER:-$(whoami)}}"
-REAL_HOME=$(eval echo ~$REAL_USER)
+if [[ $IS_LINUX -eq 1 ]] && command -v getent &>/dev/null; then
+    REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"
+elif [[ $IS_MACOS -eq 1 ]] && command -v dscl &>/dev/null; then
+    REAL_HOME="$(dscl . -read "/Users/$REAL_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+else
+    REAL_HOME="$HOME"
+fi
+[[ -n "$REAL_HOME" ]] || err "Unable to resolve home directory for $REAL_USER"
 SHELL_RC="${REAL_HOME}/.bashrc"
 [[ "$SHELL" == *zsh* ]] && SHELL_RC="${REAL_HOME}/.zshrc"
 
@@ -183,7 +204,7 @@ install_linux() {
             ok "Ollama active via systemd (persistent across reboots)"
         else
             warn "systemd inactive — starting manually..."
-            sudo nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+            bash -c "nohup ollama serve > $OLLAMA_LOG 2>&1 & echo \$!" | sudo tee "$OLLAMA_PID" >/dev/null
             echo $! | sudo tee "$OLLAMA_PID" > /dev/null
             ok "Daemon started (PID: $!, log: $OLLAMA_LOG)"
             sleep 3
@@ -693,7 +714,7 @@ kali-lite-hardcore() {
 # Activation hardcore (demande confirmation interactive)
 kali-lite-enable-hardcore() {
   echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
-  read -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
+  read -r -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
   if [[ "$confirm" != [Oo] ]]; then
     echo "Annulé."
     return 1
@@ -727,7 +748,7 @@ kali-lite-hardcore() {
 # Activation hardcore (demande confirmation interactive)
 kali-lite-enable-hardcore() {
   echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
-  read -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
+  read -r -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
   if [[ "$confirm" != [Oo] ]]; then
     echo "Annulé."
     return 1
@@ -836,7 +857,7 @@ dry_run() {
 uninstall() {
   section "UNINSTALL — Désinstallation Kali-Lite"
 
-  read -p "⚠️ Supprimer tous les artefacts Kali-Lite ? (o/N) " confirm || exit 0
+  read -r -p "⚠️ Supprimer tous les artefacts Kali-Lite ? (o/N) " confirm || exit 0
   [[ "$confirm" != [Oo] ]] && { warn "Désinstallation annulée."; exit 0; }
 
   # --- Alias shell RC ---
@@ -846,19 +867,29 @@ uninstall() {
   # --- Modèle Ollama ---
   ollama list 2>/dev/null | grep -q "kali-lite-v2" && { info "Suppression du modèle kali-lite-v2 d'Ollama..."; ollama rm kali-lite-v2 2>/dev/null || true; ok "Modèle Kali-Lite supprimé"; }
 
-  # --- Fichiers de configuration ---
+  # --- Fichiers de configuration (Linux) ---
   if [[ $IS_LINUX -eq 1 ]]; then
-    for path in /etc/kalicorp/Modelfile.kali-lite; do
-      [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
-    done
+    path="/etc/kalicorp/Modelfile.kali-lite"
+    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
   else
-    for path in "$REAL_HOME/.kalicorp/Modelfile.kali-lite"; do
-      [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+    # macOS — fichiers de config + artefacts ~/Library/
+    path="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
+    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+
+    for item in \
+      "$REAL_HOME/Library/Logs/kalicorp" \
+      "$REAL_HOME/Library/kalicorp"; do
+      [[ -d "$item" ]] && rm -rf "$item" && ok "Supprimé : $item" || info "Introuvé (déjà supprimé) : $item"
     done
+
+    if command -v brew &>/dev/null; then
+      brew services stop kali-lite 2>/dev/null || true
+      brew uninstall --cask kali-lite 2>/dev/null || true
+    fi
   fi
 
   # CLAUDE.md — conservé par sécurité
-  [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]] && warn "~/.claude/CLAUDE.md conservé (backup recommandé)" || true
+  [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]] && warn "${HOME}/.claude/CLAUDE.md conservé (backup recommandé)" || true
 
   echo ""
   ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."
@@ -868,8 +899,8 @@ uninstall() {
 # MAIN DISPATCHER
 # ═══════════════════════════════════════════════════════════════
 
-if [[ "${1:-}" == "--dry-run" ]]; then detect_os; detect_real_user; dry_run; fi
-if [[ "${1:-}" == "--uninstall" ]]; then detect_os; detect_real_user; uninstall; fi
+if [[ "${1:-}" == "--dry-run" ]]; then dry_run; fi
+if [[ "${1:-}" == "--uninstall" ]]; then uninstall; fi
 
 # ── Mode normal : installation complète ────────────────────────
 detect_os

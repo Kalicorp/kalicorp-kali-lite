@@ -54,20 +54,29 @@ bash install.sh   # macOS — sans sudo
 sudo bash install.sh  # Linux — nécessite root
 ```
 
-### Méthode rapide (pipe) — pour usage répété et confiance établie
+### Installation des variantes
 
-> **Note** : Cette méthode télécharge et exécute un script distant en une commande. Elle appelle les installateurs officiels d'Ollama et, selon le système, de NodeSource ou Homebrew. Utilise-la uniquement si tu as déjà vérifié l'intégrité du script.
+Télécharge toujours le script avant de l’exécuter. Cela permet de lire son
+contenu et de vérifier son empreinte dans [`SHA256SUMS`](SHA256SUMS).
 
 ### Kali-Lite (8 Go VRAM — sans vision)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh | bash
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
+sha256sum --check SHA256SUMS --ignore-missing
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+bash auto-install-kali-lite-v1-novision.sh
 ```
 
 ### Kali-Lite v2 (10 Go VRAM — avec vision)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh | bash
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
+sha256sum --check SHA256SUMS --ignore-missing
+bash auto-install-kali-lite-v2-vision.sh --dry-run
+bash auto-install-kali-lite-v2-vision.sh
 ```
 
 > **Temps moyen** : 15-20 min (téléchargement du modèle inclus)
@@ -77,9 +86,9 @@ curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/au
 
 ## 🛡️ Pourquoi Kali-Lite ?
 
-- **100 % local** — aucune donnée ne quitte ta machine
+- **Inférence locale** — Ollama et les modèles restent sur la machine après installation
 - **Identité Kalicorp** — Anima du Sanctuaire intégrée
-- **Compatible Claude Code v2+** en local (proxy Anthropic)
+- **Claude Code optionnel pour la V1** — connexion à Ollama local, avec permissions conservées par défaut
 - **Cross-platform** — Linux (Kali/Debian/Ubuntu/Arch) + macOS (Intel/Apple Silicon)
 - **Frugalité extrême** — tourne sur laptop 8 Go VRAM
 - **RGPD & AI Act** — conçu pour faciliter un déploiement local et la maîtrise des données. La conformité complète dépend du contexte d'utilisation, de la gouvernance et des obligations applicables à l'opérateur.

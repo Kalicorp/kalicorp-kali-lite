@@ -23,8 +23,7 @@ section() { echo -e "\n${BLUE}════════════════�
 
 # ── SÉCURITÉ : téléchargement sécurisé (priorité #2) ────────────────────────
 
-TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
-mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+# TMP_DIRECTORY — créé lazy uniquement lors d'un téléchargement réel (jamais en dry-run)
 
 safe_download() {
   local url="$1"
@@ -32,29 +31,44 @@ safe_download() {
   local expected_sha256="${3:-}"
   local max_time=60
 
+  # Création lazy du répertoire temporaire au premier appel
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  fi
+
+  local tmp_file="${dest}.tmp"
+
   # Télécharger vers fichier temporaire (jamais dans un pipe)
   if ! curl -fsSL --connect-timeout 15 --max-time "$max_time" \
-       -o "${dest}.tmp" "$url"; then
+       -o "${tmp_file}" "$url"; then
     err "Téléchargement sécurisé échoué : $url"
   fi
 
   # Vérifier checksum si fourni
   if [[ -n "$expected_sha256" ]]; then
     local actual_sha256
-    actual_sha256="$(sha256sum "${dest}.tmp" | awk '{print $1}')"
+    actual_sha256="$(sha256sum "${tmp_file}" | awk '{print $1}')"
     if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-      rm -f "${dest}.tmp"
+      rm -f "${tmp_file}"
       err "Intégrité compromise : checksum mismatch pour $(basename "$url")"
     fi
   fi
 
-  mv "${dest}.tmp" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
+  mv "${tmp_file}" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
   chmod 0644 "$dest"
 }
 
 safe_download_exec() {
   local url="$1"
   local expected_sha256="${2:-}"
+
+  # Création lazy du répertoire temporaire au premier appel
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  fi
+
   local tmp_script="${TMP_DOWNLOAD_DIR}/dl-script-$$"
 
   safe_download "$url" "$tmp_script" "$expected_sha256"
@@ -91,14 +105,16 @@ detect_real_user() {
     REAL_HOME="$HOME"
   fi
 
+  # Déterminer le shell RC sans jamais créer de fichier.
+  # Le fichier n'est créé que dans setup_alias(), en mode installation réelle, juste avant écriture.
   SHELL_RC=""
   if [[ -f "$REAL_HOME/.zshrc" ]]; then
     SHELL_RC="$REAL_HOME/.zshrc"
   elif [[ -f "$REAL_HOME/.bashrc" ]]; then
     SHELL_RC="$REAL_HOME/.bashrc"
   else
+    # .bashrc n'existe pas encore — on le note mais on ne le crée pas ici.
     SHELL_RC="$REAL_HOME/.bashrc"
-    touch "$SHELL_RC"
   fi
 
   ok "Utilisateur réel  : $REAL_USER"
@@ -190,7 +206,7 @@ setup_claude_md() {
     ok "Sauvegarde créée : CLAUDE.md.bak.*"
 
     # Confirmation interactive avant overwrite (priorité #6)
-    read -p "⚠️ Écraser le fichier existant ? $claude_dir/CLAUDE.md (o/N) " confirm || exit 0
+    read -r -p "⚠️ Écraser le fichier existant ? $claude_dir/CLAUDE.md (o/N) " confirm || exit 0
     if [[ "$confirm" != [Oo] ]]; then
       warn "Installation CLAUDE.md annulée par l'utilisateur."
       return 1
@@ -236,18 +252,23 @@ CLAUDEMD
 setup_alias() {
   local modelfile_path="$1"
 
+  # Créer $SHELL_RC s'il n'existe pas (jamais dans detect_real_user, jamais en dry-run).
+  if [[ ! -f "$SHELL_RC" ]]; then
+    touch "$SHELL_RC" || { err "Impossible de créer $SHELL_RC"; exit 1; }
+  fi
+
   # Supprimer anciens blocs kali-lite s'ils existent (priorité #6 : garde-fous)
   if grep -q "# kali-lite alias" "$SHELL_RC" 2>/dev/null; then
     warn "⚠️ Ancien alias kali-lite détecté — suppression..."
 
-    read -p "   Supprimer l'ancien bloc d'alias ? (o/N) " confirm || exit 0
+    read -r -p "   Supprimer l'ancien bloc d'alias ? (o/N) " confirm || exit 0
     if [[ "$confirm" != [Oo] ]]; then
       warn "Bloc d'alias conservé."
     else
       sed -i '/# kali-lite alias/,/# end kali-lite alias/d' "$SHELL_RC"
     fi
 
-    read -p "   Supprimer le bloc autonome ? (o/N) " confirm2 || exit 0
+    read -r -p "   Supprimer le bloc autonome ? (o/N) " confirm2 || exit 0
     if [[ "$confirm2" != [Oo] ]]; then
       warn "Bloc autonome conservé."
     else
@@ -275,7 +296,7 @@ kali-lite-hardcore() {
 # Activation hardcore (demande confirmation interactive)
 kali-lite-enable-hardcore() {
   echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
-  read -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
+  read -r -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
   if [[ "$confirm" != [Oo] ]]; then
     echo "Annulé."
     return 1
@@ -372,10 +393,9 @@ install_linux() {
       warn "⚠️ Exécution en root sans SUDO_USER — les fichiers seront créés dans /root"
       REAL_USER="root"
       REAL_HOME="/root"
-      # On force le shell RC vers un chemin accessible même depuis /root
-      if [[ -z "$SHELL_RC" || ! -f "$SHELL_RC" ]]; then
+      # On force le shell RC vers un chemin accessible même depuis /root.
+      if [[ -z "$SHELL_RC" ]]; then
         SHELL_RC="$REAL_HOME/.bashrc"
-        touch "$SHELL_RC" 2>/dev/null || { err "Impossible de créer $SHELL_RC en root"; exit 1; }
       fi
     fi
   elif [[ $EUID -ne 0 ]] && ! command -v systemctl &>/dev/null; then
@@ -653,7 +673,7 @@ uninstall() {
   section "UNINSTALL — Désinstallation Kali-Lite"
 
   # Confirmation interactive obligatoire (priorité : sécurité)
-  read -p "⚠️ Supprimer tous les artefacts Kali-Lite ? (o/N) " confirm || exit 0
+  read -r -p "⚠️ Supprimer tous les artefacts Kali-Lite ? (o/N) " confirm || exit 0
   if [[ "$confirm" != [Oo] ]]; then
     warn "Désinstallation annulée."
     exit 0
@@ -677,20 +697,34 @@ uninstall() {
     ok "Modèle Kali-Lite supprimé"
   fi
 
-  # --- Suppression des fichiers de configuration ---
+  # --- Suppression des fichiers de configuration (Linux) ---
   if [[ "$OS_TYPE" == "linux" ]]; then
-    for path in /etc/kalicorp/Modelfile.kali-lite; do
-      [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
-    done
+    path="/etc/kalicorp/Modelfile.kali-lite"
+    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
   else
-    for path in "$REAL_HOME/.kalicorp/Modelfile.kali-lite"; do
-      [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+    path="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
+    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+
+  fi
+
+  # --- Nettoyage macOS — artefacts spécifiques ~/Library/ ---
+  if [[ "$OS_TYPE" == "macos" ]]; then
+    for item in \
+      "$REAL_HOME/Library/Logs/kalicorp" \
+      "$REAL_HOME/Library/kalicorp"; do
+      [[ -d "$item" ]] && rm -rf "$item" && ok "Supprimé : $item" || info "Introuvé (déjà supprimé) : $item"
     done
+
+    # Nettoyage Homebrew service si installé via brew
+    if command -v brew &>/dev/null; then
+      brew services stop kali-lite 2>/dev/null || true
+      brew uninstall --cask kali-lite 2>/dev/null || true
+    fi
   fi
 
   # CLAUDE.md — on ne supprime pas, on backup par sécurité
   if [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]]; then
-    warn "~/.claude/CLAUDE.md conservé (backup recommandé)"
+    warn "${HOME}/.claude/CLAUDE.md conservé (backup recommandé)"
   fi
 
   echo ""
@@ -703,7 +737,7 @@ uninstall() {
 
 echo "========================================"
 echo " Kalicorp Hardening — Kali-Lite"
-echo " GPL-2.0 | Zero cloud | Zero tracking"
+echo " GPL-2.0 | Inférence locale | Zéro tracking Kalicorp"
 echo " Linux + macOS"
 echo "========================================"
 echo ""
