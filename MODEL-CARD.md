@@ -1,124 +1,182 @@
 # Model Card — Kali-Lite
 
-> **Kalicorp — Le Sanctuaire numérique européen**
-> Version : 2.0.0 | Date : 2026-05-22 | Licence : GPL-2.0
+> **Kalicorp — Le Sanctuaire numérique européen**  
+> Version documentaire : 2.1.0 | Mise à jour : 2026-07-21 | Licence : GPL-2.0
 
 ---
 
-## 📋 Résumé du modèle
+## Résumé
 
-Kali-Lite est une famille de modèles de langage locaux, basée sur Qwen3 / Qwen3.5, conçue pour fonctionner sur du matériel modeste (8-10 Go VRAM) tout en offrant des capacités de chat, code et assistance système. Deux versions sont disponibles :
+Kali-Lite est une famille d'Anima locales et frugales conçues pour fonctionner sur du matériel accessible, sans télémétrie et sans dépendance à un service cloud après installation.
+
+Kali-Lite n'est pas un modèle entraîné intégralement par Kalicorp. La famille assemble un modèle de base compatible, une doctrine explicite, une spécialité optionnelle et un harnais d'exécution. Cette architecture rend le comportement lisible, personnalisable et remplaçable.
 
 | Propriété | Kali-Lite | Kali-Lite v2 |
 |---|---|---|
-| **Base** | Qwen3 8B | Qwen3.5 9B Vision |
-| **VRAM** | ~8 Go | ~10 Go |
-| **Vision** | ❌ | ✅ |
-| **Taille GGUF** | ~5,2 Go | ~6,8 Go |
-| **Température** | 0.7 | 0.7 |
-| **Top-p** | 0.9 | 0.9 |
-| **Contexte** | 8192 tokens | 8192 tokens |
-| **Runtime** | Ollama | Ollama |
+| **Base actuelle** | Qwen3 8B | Qwen3.5 9B Vision |
+| **Mémoire vidéo indicative** | ~8 Go | ~10 Go |
+| **Vision** | Non | Oui |
+| **Taille indicative** | ~5,2 Go | ~6,8 Go |
+| **Runtime principal** | Ollama | Ollama |
+| **Usage dominant** | code, chat, système | vision, code, chat |
+| **Contexte configuré** | selon le Modelfile livré | selon le Modelfile livré |
+
+Les besoins réels varient selon la quantification, le système d'exploitation, le contexte chargé, le nombre d'outils et les autres applications ouvertes.
 
 ---
 
-## 🎯 Utilisation prévue
+## Intention
 
-### Domaines d'application
-- Assistance système Linux (audit, durcissement, maintenance)
-- Développement et revue de code (Python, Bash, YAML, configs)
-- Conformité RGPD / AI Act
-- Analyse d'images (v2 Vision uniquement)
-- Formation et démonstrations IA locale
+Kali-Lite vise à fournir une continuité de travail lorsque l'accès réseau, un quota distant, une politique de fournisseur ou un coût d'usage empêche de poursuivre normalement un projet.
 
-### Cas d'usage non prévus
-- Génération de contenu offensif ou malveillant
-- Attaques contre des systèmes tiers
-- Traitement de données sensibles sans autorisation
-- Déploiement cloud ou multi-tenant
+Elle est conçue pour :
 
----
-
-## 🔧 Facteurs du modèle
-
-Le modèle est personnalisé via un **Modelfile Ollama** :
-
-```
-FROM qwen3:8b          # ou qwen3.5:9b pour v2
-
-TEMPLATE """
-{{- if .System }}
-{{ .System }}
-{{ end }}
-{{- range .Messages }}
-{{- if eq .Role "user" }}
-{{ .Content }}
-{{ end }}
-{{- end }}
-"""
-
-SYSTEM """
-Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
-...
-"""
-
-PARAMETER temperature 0.7
-PARAMETER top_p 0.9
-PARAMETER num_ctx 8192
-```
-
-L'identité système intègre :
-- Périmètre opérationnel défensif uniquement
-- Éthique intransigeante (refus catégorique des actions offensives)
-- Contexte infrastructure Kalicorp
+- travailler localement avec les ressources réellement disponibles ;
+- annoncer clairement ses limites ;
+- distinguer faits, hypothèses, actions et résultats ;
+- ne jamais simuler l'exécution d'un outil ;
+- aider l'utilisateur à devenir plus autonome ;
+- permettre une personnalisation rapide sans rendre le système opaque ;
+- orienter vers une infrastructure plus puissante lorsque la tâche dépasse raisonnablement la machine locale.
 
 ---
 
-## 📊 Limitations connues
+## Architecture en quatre couches
 
-- **Taille de contexte** : 8192 tokens max (pas adapté aux très longs documents)
-- **Pas de fine-tuning** : le modèle est un prompt-injection, pas un modèle fine-tuné
-- **GPU optionnel** : fonctionne en CPU mais plus lent
-- **Pas de RAG** : pas de base de connaissances externe intégrée
-- **Langue principale** : français (anglais fonctionnel mais non optimisé)
+### 1. Modèle de base
+
+Le moteur de génération choisi selon le matériel, la licence, la langue et le besoin fonctionnel.
+
+### 2. Doctrine Kali-Lite
+
+Le socle commun : sobriété, honnêteté opérationnelle, respect de l'utilisateur, lisibilité, continuité et absence de télémétrie ajoutée par Kalicorp.
+
+### 3. Spécialité
+
+Une orientation facultative : développement, pédagogie, vision, cyberdéfense, accessibilité ou autre domaine défini par l'opérateur.
+
+### 4. Harnais d'exécution
+
+L'environnement qui relie l'Anima aux outils : Ollama, Claude Code, Hermes, OpenCLI, vLLM, MCP ou une intégration locale équivalente.
+
+Voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## 🛡️ Sécurité & Vie privée
+## Utilisations prévues
 
-| Aspect | Valeur |
+- assistance au développement et revue de code ;
+- assistance système locale ;
+- formation à l'IA locale et à ses contraintes physiques ;
+- analyse d'images avec une variante compatible ;
+- prototypage d'Anima personnalisées ;
+- continuité de travail hors connexion ;
+- traitements locaux lorsque la confidentialité ou la souveraineté l'exige.
+
+## Utilisations non prévues
+
+- attaques contre des systèmes tiers ;
+- décisions médicales, juridiques ou financières sans validation humaine qualifiée ;
+- traitement de données sans base légale, autorisation ou gouvernance adaptée ;
+- promesse de conformité automatique par le seul fait d'une exécution locale ;
+- remplacement d'une infrastructure plus puissante lorsque la tâche excède les capacités du poste.
+
+---
+
+## Personnalisation
+
+Kali-Lite est personnalisée principalement par configuration et prompt système, pas par fine-tuning des poids du modèle.
+
+Le gabarit [`templates/anima.template.md`](templates/anima.template.md) aide à renseigner :
+
+- le nom et le rôle de l'Anima ;
+- son périmètre ;
+- ses limites ;
+- ses outils ;
+- son style d'interaction ;
+- ses critères d'escalade ;
+- les éléments de continuité conservés par le harnais.
+
+Cette personnalisation ne garantit pas à elle seule un comportement parfait. Elle doit être testée avec des cas réels, des échecs connus et des limites matérielles représentatives.
+
+---
+
+## Continuité et apprentissage
+
+Kali-Lite peut conserver une continuité si le harnais utilisé fournit une mémoire locale, un journal de projet, un fichier `anima.md` ou un mécanisme équivalent.
+
+Cette continuité ne modifie pas automatiquement les poids du modèle. Elle correspond à une mémoire externe gouvernée par l'opérateur. Toute affirmation selon laquelle l'Anima « apprend » doit préciser ce qui est réellement conservé, où, par qui et avec quelle possibilité de suppression.
+
+---
+
+## Limites connues
+
+- les performances dépendent fortement du matériel et de la quantification ;
+- une exécution CPU peut être nettement plus lente ;
+- les longs contextes augmentent la consommation de mémoire et la latence ;
+- les petits modèles peuvent manquer des nuances, oublier des contraintes ou produire des erreurs plausibles ;
+- la qualité des appels d'outils dépend du modèle, du template et du harnais ;
+- le fonctionnement local ne rend pas automatiquement un usage conforme au RGPD ou à l'AI Act ;
+- aucune mémoire durable n'existe sans composant externe prévu à cet effet ;
+- aucune variante ne doit prétendre avoir exécuté une action sans preuve fournie par l'outil.
+
+---
+
+## Sécurité et vie privée
+
+| Aspect | Position du projet |
 |---|---|
-| Télémétrie | Aucune |
-| Données externes | Aucune |
-| Connexion réseau | Aucune (après installation) |
-| Clés API stockées | Aucune |
-| Tracking | Aucun |
-| Conformité RGPD | Conforme (données 100 % locales) |
+| Télémétrie ajoutée par Kali-Lite | Aucune |
+| Exécution principale | Locale |
+| Données envoyées par Kalicorp | Aucune par défaut |
+| Clés API requises | Aucune pour l'usage Ollama local |
+| Connexion après installation | Non requise pour le modèle déjà installé |
+| Conformité | Facilitée par le local, jamais garantie automatiquement |
+
+Les installateurs peuvent télécharger Ollama, des dépendances ou les poids du modèle. L'utilisateur doit lire les scripts, vérifier les empreintes publiées et examiner les politiques des dépendances qu'il choisit.
 
 ---
 
-## 📜 Licence
+## Gouvernance humaine
 
-**GPL-2.0** — Redistribution libre. Voir [LICENSE](LICENSE).
+L'opérateur reste responsable :
+
+- des données fournies ;
+- des outils autorisés ;
+- des actions exécutées ;
+- des décisions prises à partir des réponses ;
+- de la conservation ou suppression des mémoires ;
+- de la conformité au contexte d'usage.
+
+Kali-Lite doit pouvoir recommander une validation humaine ou une infrastructure différente lorsque son niveau de confiance, son contexte ou ses ressources sont insuffisants.
 
 ---
 
-## 🏷️ Métadonnées
+## Licence
+
+**GPL-2.0** — voir [`LICENSE`](LICENSE).
+
+## Métadonnées
 
 ```yaml
 license: gpl-2.0
-framework: ollama
-base_model: qwen3:8b
+framework:
+  - ollama
+base_models:
+  - qwen3:8b
+  - qwen3.5:9b
 customized_by: Kalicorp
+architecture:
+  - base-model
+  - doctrine
+  - specialty
+  - execution-harness
 tags:
   - kali-lite
   - ia-frugale
   - ia-souveraine
   - local-llm
   - ollama
-  - qwen3
-  - french-ai
-  - green-ai
-  - rgpd
-  - ai-act
+  - autonomie
+  - privacy
 ```

@@ -20,6 +20,10 @@
 
 **Kali-Lite** est la famille de modèles IA de **Kalicorp** : conçue pour tourner sur du matériel modeste, 100 % local, sans télémétrie, sans cloud, sans compromis sur la souveraineté des données.
 
+Kali-Lite ne cherche pas à masquer les limites physiques de l'IA locale. Si la machine souffle, chauffe ou ralentit, ce n'est pas un échec : c'est le coût matériel du calcul qui devient visible. Elle travaille avec les ressources disponibles, annonce ses limites et peut orienter l'utilisateur vers une infrastructure plus adaptée lorsque la tâche dépasse raisonnablement sa machine.
+
+La famille repose sur quatre couches séparables : **modèle de base**, **doctrine Kali-Lite**, **spécialité**, puis **harnais d'exécution**. Cette séparation permet de personnaliser une Anima sans réécrire tout le système ni perdre sa lisibilité.
+
 Deux versions selon tes besoins :
 
 | Version | Moteur | VRAM | Vision | Cas d'usage | Taille |
@@ -29,18 +33,52 @@ Deux versions selon tes besoins :
 
 ---
 
-## ⚡ Installation en 2 commandes
+## ⚡ Installation
+
+### Méthode recommandée — vérification avant exécution
+
+Télécharge le script, vérifie son empreinte SHA-256 publiée dans ce dépôt, lis-le, puis exécute-le localement.
+
+```bash
+# 1. Télécharger
+curl -fsSL -o install.sh https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh
+
+# 2. Vérifier l'empreinte (comparer avec SHA-256 publié dans ce dépôt)
+sha256sum install.sh
+
+# 3. Lire le script avant exécution
+less install.sh
+
+# 4. Exécuter localement
+bash install.sh   # macOS — sans sudo
+sudo bash install.sh  # Linux — nécessite root
+```
+
+### Installation des variantes
+
+Télécharge toujours le script avant de l’exécuter. Cela permet de lire son
+contenu et de vérifier son empreinte dans [`SHA256SUMS`](SHA256SUMS).
 
 ### Kali-Lite (8 Go VRAM — sans vision)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh | bash
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
+sha256sum --check SHA256SUMS --ignore-missing
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+bash auto-install-kali-lite-v1-novision.sh        # macOS
+sudo bash auto-install-kali-lite-v1-novision.sh   # Linux
 ```
 
 ### Kali-Lite v2 (10 Go VRAM — avec vision)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh | bash
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
+sha256sum --check SHA256SUMS --ignore-missing
+bash auto-install-kali-lite-v2-vision.sh --dry-run
+bash auto-install-kali-lite-v2-vision.sh        # macOS
+sudo bash auto-install-kali-lite-v2-vision.sh   # Linux
 ```
 
 > **Temps moyen** : 15-20 min (téléchargement du modèle inclus)
@@ -50,12 +88,12 @@ curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/au
 
 ## 🛡️ Pourquoi Kali-Lite ?
 
-- **100 % local** — aucune donnée ne quitte ta machine
+- **Inférence locale** — Ollama et les modèles restent sur la machine après installation
 - **Identité Kalicorp** — Anima du Sanctuaire intégrée
-- **Compatible Claude Code v2+** en local (proxy Anthropic)
+- **Claude Code optionnel pour la V1** — connexion à Ollama local, avec permissions conservées par défaut
 - **Cross-platform** — Linux (Kali/Debian/Ubuntu/Arch) + macOS (Intel/Apple Silicon)
 - **Frugalité extrême** — tourne sur laptop 8 Go VRAM
-- **Conforme RGPD / AI Act** — zéro télémétrie, zéro cloud
+- **RGPD & AI Act** — conçu pour faciliter un déploiement local et la maîtrise des données. La conformité complète dépend du contexte d'utilisation, de la gouvernance et des obligations applicables à l'opérateur.
 
 ---
 
@@ -100,7 +138,12 @@ curl -fsSL https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/au
 |---|---|
 | [INSTALLATION.md](INSTALLATION.md) | Guide d'installation détaillé |
 | [REFACTOR_BRIEF.md](REFACTOR_BRIEF.md) | Architecture du script d'installation |
-| [MODEL-CARD.md](MODEL-CARD.md) | Fiche technique du modèle (Hugging Face style) |
+| [MODEL-CARD.md](MODEL-CARD.md) | Fiche technique, usages prévus et limites |
+| [docs/WHY-KALI-LITE.md](docs/WHY-KALI-LITE.md) | Intention, posture et principes de conception |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Les quatre couches : base, doctrine, spécialité, harnais |
+| [templates/anima.template.md](templates/anima.template.md) | Gabarit de personnalisation d'une Anima |
+| [SECURITY.md](SECURITY.md) | Politique de sécurité et divulgation responsable |
+| [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des scripts d'installation |
 | [LICENSE](LICENSE) | GPL-2.0 |
 
 ---

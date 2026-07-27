@@ -4,7 +4,7 @@
 #  Kalicorp · Kali-Lite V2 (qwen3.5:9b + Vision) — Cross-Platform Autoinstaller
 #  GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
 #
-#  Stack : Ollama · qwen3.5:9b · Modelfile Kali-Lite · Claude Code
+#  Stack : Ollama · qwen3.5:9b · Modelfile Kali-Lite
 #  Features : Vision (image analysis), 9B context window
 #  Supported : Linux (Debian/Ubuntu/Kali/Arch) + macOS (Intel/Apple Silicon)
 #
@@ -28,7 +28,7 @@ section() { echo -e "\n${BLUE}${BOLD}[»] $*${NC}\n"; }
 echo -e "${BOLD}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║   Kalicorp — Kali-Lite V2 (qwen3.5:9b + Vision)           ║"
-echo "  ║   GPL-2.0  ·  Zero cloud  ·  Zero tracking                ║"
+echo "  ║   GPL-2.0  ·  Inférence locale  ·  Zéro tracking Kalicorp ║"
 echo "  ║   Linux + macOS (Intel/Apple Silicon)                     ║"
 echo "  ╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -50,7 +50,7 @@ esac
 section "0/6 — Prerequisites"
 
 # ── LINUX-ONLY: sudo check ──
-if [[ $IS_LINUX -eq 1 ]]; then
+if [[ $IS_LINUX -eq 1 && "${1:-}" != "--dry-run" ]]; then
     [[ $EUID -ne 0 ]] && err "Linux requires sudo: sudo bash auto-install-kali-lite-v2-vision.sh"
 fi
 
@@ -63,9 +63,68 @@ fi
 
 command -v curl &>/dev/null || err "curl required — install and retry"
 
+# ── SÉCURITÉ : téléchargement sécurisé (priorité #2) ────────────────────────
+
+# TMP_DIRECTORY — créé lazy uniquement lors d'un téléchargement réel (jamais en dry-run)
+
+safe_download() {
+  local url="$1"
+  local dest="$2"
+  local expected_sha256="${3:-}"
+  local max_time=60
+
+  # Création lazy du répertoire temporaire au premier appel
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  fi
+
+  local tmp_file="${dest}.tmp"
+
+  if ! curl -fsSL --connect-timeout 15 --max-time "$max_time" \
+       -o "${tmp_file}" "$url"; then
+    err "Téléchargement sécurisé échoué : $url"
+  fi
+
+  if [[ -n "$expected_sha256" ]]; then
+    local actual_sha256
+    actual_sha256="$(sha256sum "${tmp_file}" | awk '{print $1}')"
+    if [[ "$actual_sha256" != "$expected_sha256" ]]; then
+      rm -f "${tmp_file}"
+      err "Intégrité compromise : checksum mismatch pour $(basename "$url")"
+    fi
+  fi
+
+  mv "${tmp_file}" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
+  chmod 0644 "$dest"
+}
+
+safe_download_exec() {
+  local url="$1"
+  local expected_sha256="${2:-}"
+
+  # Création lazy du répertoire temporaire au premier appel
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
+    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  fi
+
+  local tmp_script="${TMP_DOWNLOAD_DIR}/dl-script-$$"
+
+  safe_download "$url" "$tmp_script" "$expected_sha256"
+  bash "$tmp_script" || err "Exécution du script téléchargé échouée : $url"
+}
+
 # ── SHARED: User context ──
 REAL_USER="${SUDO_USER:-${USER:-$(whoami)}}"
-REAL_HOME=$(eval echo ~$REAL_USER)
+if [[ $IS_LINUX -eq 1 ]] && command -v getent &>/dev/null; then
+    REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"
+elif [[ $IS_MACOS -eq 1 ]] && command -v dscl &>/dev/null; then
+    REAL_HOME="$(dscl . -read "/Users/$REAL_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+else
+    REAL_HOME="$HOME"
+fi
+[[ -n "$REAL_HOME" ]] || err "Unable to resolve home directory for $REAL_USER"
 SHELL_RC="${REAL_HOME}/.bashrc"
 [[ "$SHELL" == *zsh* ]] && SHELL_RC="${REAL_HOME}/.zshrc"
 
@@ -92,19 +151,6 @@ if [[ $IS_MACOS -eq 1 ]]; then
     fi
 fi
 
-# ── SHARED: Personal Claude config detection ──
-PERSO_KEY=""
-PERSO_FOUND=0
-if [[ -f "$SHELL_RC" ]]; then
-    PERSO_KEY=$(grep -E "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null | grep -v '=ollama' | head -1 | sed 's/^export ANTHROPIC_API_KEY=//' | tr -d '"' || true)
-fi
-if [[ -n "$PERSO_KEY" ]]; then
-    PERSO_FOUND=1
-    warn "Personal Claude config detected — will preserve"
-else
-    ok "No personal Claude config — clean install"
-fi
-
 # ═══════════════════════════════════════════════════════════════
 # SHARED: GPU info for summary
 # ═══════════════════════════════════════════════════════════════
@@ -128,7 +174,7 @@ install_linux() {
         ok "Ollama present: $(ollama --version 2>/dev/null)"
     else
         info "Installing Ollama..."
-        curl -fsSL https://ollama.com/install.sh | sh || err "Ollama installation failed"
+        safe_download_exec "https://ollama.com/install.sh" || err "Ollama installation failed"
         ok "Ollama installed"
     fi
 
@@ -146,7 +192,7 @@ install_linux() {
             ok "Ollama active via systemd (persistent across reboots)"
         else
             warn "systemd inactive — starting manually..."
-            sudo nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+            bash -c "nohup ollama serve > $OLLAMA_LOG 2>&1 & echo \$!" | sudo tee "$OLLAMA_PID" >/dev/null
             echo $! | sudo tee "$OLLAMA_PID" > /dev/null
             ok "Daemon started (PID: $!, log: $OLLAMA_LOG)"
             sleep 3
@@ -183,21 +229,42 @@ install_linux() {
 
     # ── 4. Kali-Lite v2 custom model via Modelfile ──
     section "4/6 — Kali-Lite v2 custom model (Modelfile)"
+
+    TMPFILE=""
+    cleanup_tmpfile() { [[ -n "$TMPFILE" && -f "$TMPFILE" ]] && rm -f "$TMPFILE"; }
+    trap cleanup_tmpfile EXIT INT TERM
+
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     MODELFILE_PATH="${SCRIPT_DIR}/Modelfile"
     if [[ -f "$MODELFILE_PATH" ]]; then
-        info "Building Kali-Lite v2 from Modelfile..."
-        ollama create kali-lite-v2 "$MODELFILE_PATH" || warn "Modelfile build failed — using base qwen3.5:9b"
-        ok "kali-lite-v2 model built from Modelfile"
+        info "Building Kali-Lite v2 from local Modelfile..."
+        if ! ollama create kali-lite-v2 -f "$MODELFILE_PATH"; then
+            err "Local Modelfile build failed — aborting model creation"
+        fi
+        ok "kali-lite-v2 created from local Modelfile"
     else
-        warn "Modelfile not found at $MODELFILE_PATH — skipping custom model build"
+        info "No local Modelfile found at $MODELFILE_PATH — downloading from repository..."
+
+        TMPFILE="$(mktemp /tmp/kalicorp-modelfile.XXXXXX)" || err "Failed to create temp file for Modelfile download"
+
+        if ! curl -fsSL --max-time 30 \
+            -o "$TMPFILE" \
+            https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/Modelfile; then
+            err "GitHub raw fetch failed — kali-lite-v2 was not created"
+        elif ! ollama create kali-lite-v2 -f "$TMPFILE"; then
+            err "ollama create from downloaded Modelfile failed — aborting model creation"
+        else
+            ok "kali-lite-v2 created from downloaded official Modelfile"
+        fi
+
+        # trap will clean up $TMPFILE on exit
     fi
 
     # ── 5. Node.js + npm ──
     info "Checking Node.js..."
     if ! command -v npm &>/dev/null; then
         info "npm not found — installing Node.js LTS..."
-        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+        safe_download_exec "https://deb.nodesource.com/setup_lts.x" || err "NodeSource setup failed"
         sudo apt-get install -y nodejs
     fi
 }
@@ -275,14 +342,35 @@ install_macos() {
 
     # ── 4. Kali-Lite v2 custom model via Modelfile ──
     section "4/6 — Kali-Lite v2 custom model (Modelfile)"
+
+    TMPFILE=""
+    cleanup_tmpfile() { [[ -n "$TMPFILE" && -f "$TMPFILE" ]] && rm -f "$TMPFILE"; }
+    trap cleanup_tmpfile EXIT INT TERM
+
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     MODELFILE_PATH="${SCRIPT_DIR}/Modelfile"
     if [[ -f "$MODELFILE_PATH" ]]; then
-        info "Building Kali-Lite v2 from Modelfile..."
-        ollama create kali-lite-v2 "$MODELFILE_PATH" || warn "Modelfile build failed — using base qwen3.5:9b"
-        ok "kali-lite-v2 model built from Modelfile"
+        info "Building Kali-Lite v2 from local Modelfile..."
+        if ! ollama create kali-lite-v2 -f "$MODELFILE_PATH"; then
+            err "Local Modelfile build failed — aborting model creation"
+        fi
+        ok "kali-lite-v2 created from local Modelfile"
     else
-        warn "Modelfile not found at $MODELFILE_PATH — skipping custom model build"
+        info "No local Modelfile found at $MODELFILE_PATH — downloading from repository..."
+
+        TMPFILE="$(mktemp /tmp/kalicorp-modelfile.XXXXXX)" || err "Failed to create temp file for Modelfile download"
+
+        if ! curl -fsSL --max-time 30 \
+            -o "$TMPFILE" \
+            https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/Modelfile; then
+            err "GitHub raw fetch failed — kali-lite-v2 was not created"
+        elif ! ollama create kali-lite-v2 -f "$TMPFILE"; then
+            err "ollama create from downloaded Modelfile failed — aborting model creation"
+        else
+            ok "kali-lite-v2 created from downloaded official Modelfile"
+        fi
+
+        # trap will clean up $TMPFILE on exit
     fi
 
     # ── 5. Node.js + npm ──
@@ -294,8 +382,94 @@ install_macos() {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# ── DRY-RUN MODE ───────────────────────────────────────────────
+
+dry_run() {
+  section "DRY-RUN — Simulation (aucune modification)"
+  echo ""
+  info "OS détecté : $([ "$IS_LINUX" -eq 1 ] && echo 'Linux' || echo 'macOS')"
+  info "Utilisateur réel : $REAL_USER ($REAL_HOME)"
+  info "Shell RC : $SHELL_RC"
+
+  if [[ $IS_LINUX -eq 1 ]]; then
+    local MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
+    info "[1] Ollama → $(command -v ollama &>/dev/null && 'déjà installé' || 'sera téléchargé via curl')"
+    info "[2] Daemon Ollama → systemd ou nohup (PID: /var/run/kalicorp-ollama.pid)"
+    info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
+    info "[4] GPU → $(nvidia-smi &>/dev/null && 'NVIDIA détecté' || 'CPU mode')"
+    info "[5] Modelfile → $MODELFILE_PATH (création)"
+    info "[6] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
+    info "[7] Alias kali-lite-v2 → injecté dans $SHELL_RC"
+  else
+    local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
+    info "[1] Ollama → $(command -v ollama &>/dev/null && 'déjà installé' || 'sera brew install')"
+    info "[2] Daemon Ollama → brew services ou nohup (PID: $REAL_HOME/Library/kalicorp/ollama.pid)"
+    info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
+    local gpu_info
+    gpu_info=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs || echo 'non détecté')
+    info "[4] GPU → ${gpu_info:-Metal/CPU}"
+    info "[5] Node.js → $(command -v node &>/dev/null && 'déjà installé' || 'sera brew install')"
+    info "[6] Modelfile → $MODELFILE_PATH (création)"
+    info "[7] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
+    info "[8] Alias kali-lite-v2 → injecté dans $SHELL_RC"
+  fi
+
+  echo ""
+  ok "DRY-RUN terminé — aucune modification effectuée."
+  exit 0
+}
+
+# ═══════════════════════════════════════════════════════════════
+# ── UNINSTALL MODE ─────────────────────────────────────────────
+
+uninstall() {
+  section "UNINSTALL — Désinstallation Kali-Lite V2"
+
+  read -r -p "⚠️ Supprimer tous les artefacts Kali-Lite V2 ? (o/N) " confirm || exit 0
+  [[ "$confirm" != [Oo] ]] && { warn "Désinstallation annulée."; exit 0; }
+
+  # --- Alias shell RC ---
+  info "Suppression des blocs d'alias de $SHELL_RC..."
+  grep -q "# kali-lite-v2 alias" "$SHELL_RC" 2>/dev/null && sed -i '/# kali-lite-v2 alias/,/# end kali-lite-v2 alias/d' "$SHELL_RC" && ok "Bloc 'kali-lite-v2 alias' supprimé" || true
+
+  # --- Modèle Ollama ---
+  ollama list 2>/dev/null | grep -q "kali-lite-v2" && { info "Suppression du modèle kali-lite-v2 d'Ollama..."; ollama rm kali-lite-v2 2>/dev/null || true; ok "Modèle Kali-Lite V2 supprimé"; }
+
+  # --- Fichiers de configuration (Linux) ---
+  if [[ $IS_LINUX -eq 1 ]]; then
+    path="/etc/kalicorp/Modelfile.kali-lite-v2"
+    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+  else
+    # macOS — fichiers de config + artefacts ~/Library/
+    path="$REAL_HOME/.kalicorp/Modelfile.kali-lite-v2"
+    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+
+    for item in \
+      "$REAL_HOME/Library/Logs/kalicorp" \
+      "$REAL_HOME/Library/kalicorp"; do
+      [[ -d "$item" ]] && rm -rf "$item" && ok "Supprimé : $item" || info "Introuvé (déjà supprimé) : $item"
+    done
+
+    if command -v brew &>/dev/null; then
+      brew services stop kali-lite-v2 2>/dev/null || true
+      brew uninstall --cask kali-lite-v2 2>/dev/null || true
+    fi
+  fi
+
+  # CLAUDE.md — conservé par sécurité
+  [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]] && warn "${HOME}/.claude/CLAUDE.md conservé (backup recommandé)" || true
+
+  echo ""
+  ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."
+}
+
+# ═══════════════════════════════════════════════════════════════
 # SHARED: Setup + finalize
 # ═══════════════════════════════════════════════════════════════
+
+if [[ "${1:-}" == "--dry-run" ]]; then dry_run; fi
+if [[ "${1:-}" == "--uninstall" ]]; then uninstall; fi
+
 if [[ $IS_LINUX -eq 1 ]]; then
     install_linux
 else
@@ -303,5 +477,5 @@ else
 fi
 
 ok "V2 (qwen3.5:9b + Vision) setup complete!"
-ok "Run: ollama list | grep qwen3.5"
-ok "Start with: ollama run kali-lite-v2"
+info "Verify model status:"
+echo "  ollama list | grep kali-lite-v2"

@@ -30,6 +30,12 @@ jobs:
       - name: Check v2 installer syntax
         run: bash -n auto-install-kali-lite-v2-vision.sh
 
+      - name: ShellCheck installers
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: '.'
+          severity: error
+
   test-v1-syntax:
     name: Kali-Lite v1 — syntax & structure
     runs-on: ubuntu-latest
@@ -161,3 +167,15 @@ jobs:
             echo "FAIL: assets/kali-lite-banner.png is missing"
             exit 1
           fi
+
+  dry-run-isolation:
+    name: Dry-run has no side effects
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run isolated dry-run tests
+        run: bash tests/test_dry_run.sh
+
+      - name: Run secret regression tests
+        run: bash tests/test-no-secret-leak.sh

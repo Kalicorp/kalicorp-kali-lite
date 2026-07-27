@@ -1,0 +1,58 @@
+[
+  {
+    "rule": "generic-api-key",
+    "description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+    "file": "install.sh",
+    "start_line": 60,
+    "end_line": 61,
+    "commit_sha": "237c4aad0e3e",
+    "author_email": "snow.mining.fr@gmail.com",
+    "date": "2026-05-09T18:03:37Z",
+    "secret_preview": "[REDACTED - secret value intentionally omitted]",
+    "match_context": "PERSO_KEY=\"\"\nPERSO_FOUND=0",
+    "fingerprint": "237c4aad0e3ebaebcad5bc80892456da7c8fdc49:install.sh:generic-api-key:60",
+    "status_rotation": "NON-COMPROMIS (valeur vide PERSO_KEY=\"\")"
+  },
+  {
+    "rule": "generic-api-key",
+    "description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+    "file": "install.sh",
+    "start_line": 95,
+    "end_line": 96,
+    "commit_sha": "e0f87d018060",
+    "author_email": "snow.mining.fr@gmail.com",
+    "date": "2026-05-10T08:03:49Z",
+    "secret_preview": "[REDACTED - secret value intentionally omitted]",
+    "match_context": "PERSO_KEY=\"\"\nPERSO_FOUND=0",
+    "fingerprint": "e0f87d0180604de03c1d373bbd6dc4c78b3bcb5c:install.sh:generic-api-key:95",
+    "status_rotation": "NON-COMPROMIS (valeur vide PERSO_KEY=\"\")"
+  },
+  {
+    "rule": "generic-api-key",
+    "description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+    "file": "auto-install-kali-lite-v2-vision.sh",
+    "start_line": 95,
+    "end_line": 96,
+    "commit_sha": "0719fd6907e5",
+    "author_email": "snow.mining.fr@gmail.com",
+    "date": "2026-05-11T12:41:05Z",
+    "secret_preview": "[REDACTED - secret value intentionally omitted]",
+    "match_context": "PERSO_KEY=\"\"\nPERSO_FOUND=0",
+    "fingerprint": "0719fd6907e5add959c8c477038c4fe56ab1c888:auto-install-kali-lite-v2-vision.sh:generic-api-key:95",
+    "status_rotation": "NON-COMPROMIS (valeur vide PERSO_KEY=\"\")"
+  },
+  {
+    "rule": "generic-api-key",
+    "description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+    "file": "auto-install-kali-lite-v1-novision.sh",
+    "start_line": 95,
+    "end_line": 96,
+    "commit_sha": "d2568eb0a3fc",
+    "author_email": "snow.mining.fr@gmail.com",
+    "date": "2026-05-10T12:11:55Z",
+    "secret_preview": "[REDACTED - secret value intentionally omitted]",
+    "match_context": "PERSO_KEY=\"\"\nPERSO_FOUND=0",
+    "fingerprint": "d2568eb0a3fcaba39eb44f79c00b2df89b9acdeb:auto-install-kali-lite-v1-novision.sh:generic-api-key:95",
+    "status_rotation": "NON-COMPROMIS (valeur vide PERSO_KEY=\"\")"
+  }
+]

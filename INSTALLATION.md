@@ -6,12 +6,20 @@ Cross-platform installer for **Kali-Lite**, a sovereign, local-first AI assistan
 
 ### Linux (Kali, Debian, Ubuntu, Arch)
 ```bash
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/install.sh)
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/install.sh
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
+sha256sum --check SHA256SUMS --ignore-missing
+bash install.sh --dry-run
+sudo bash install.sh
 ```
 
 ### macOS (Intel / Apple Silicon)
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-lite/main/install.sh)
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/install.sh
+curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
+grep ' install.sh$' SHA256SUMS | shasum -a 256 -c -
+bash install.sh --dry-run
+bash install.sh
 ```
 
 **Note:** macOS does **not** require `sudo` — Homebrew refuses to run as root.
@@ -51,7 +59,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-
 ### All Platforms
 
 1. **Ollama** — Local LLM runtime
-   - Linux: System service via `curl | sh`
+   - Linux: installateur officiel téléchargé dans un fichier temporaire avant exécution
    - macOS: Homebrew package + optional `brew services`
 
 2. **qwen3:8b** — Base model (~5.2 GB download)
@@ -70,7 +78,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/balduregates1/kalicorp-kali-
 
 5. **Shell Alias** — Quick access
    ```bash
-   alias kali-lite='... claude --dangerously-skip-permissions'
+   alias kali-lite='... claude'
    ```
    Injected into `~/.bashrc` or `~/.zshrc`
 
@@ -300,7 +308,10 @@ npm uninstall -g @anthropic-ai/claude-code
         └────────────────────────────────┘
 ```
 
-**Key Principle** : Zero cloud. All data stays local. Ollama runs on your machine.
+**Key Principle** : l’inférence est locale. L’installation nécessite un accès
+réseau pour télécharger Ollama, les dépendances choisies et les poids du
+modèle. Kali-Lite n’ajoute aucune télémétrie, mais les dépendances conservent
+leurs propres politiques et doivent être auditées séparément.
 
 ---
 
