@@ -51,7 +51,7 @@ section "0/6 — Prerequisites"
 # ── LINUX-ONLY: sudo check (priorité #7 : privilèges réduits) ──
 if [[ $IS_LINUX -eq 1 && "${1:-}" != "--dry-run" ]]; then
     if [[ $EUID -ne 0 ]]; then
-        err "Linux requires root for system install. Use: sudo bash <(curl ...)"
+        err "Linux requires root for system install. Use: sudo bash auto-install-kali-lite-v1-novision.sh"
     fi
 fi
 

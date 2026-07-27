@@ -66,7 +66,8 @@ curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/a
 curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
 sha256sum --check SHA256SUMS --ignore-missing
 bash auto-install-kali-lite-v1-novision.sh --dry-run
-bash auto-install-kali-lite-v1-novision.sh
+bash auto-install-kali-lite-v1-novision.sh        # macOS
+sudo bash auto-install-kali-lite-v1-novision.sh   # Linux
 ```
 
 ### Kali-Lite v2 (10 Go VRAM — avec vision)
@@ -76,7 +77,8 @@ curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/a
 curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
 sha256sum --check SHA256SUMS --ignore-missing
 bash auto-install-kali-lite-v2-vision.sh --dry-run
-bash auto-install-kali-lite-v2-vision.sh
+bash auto-install-kali-lite-v2-vision.sh        # macOS
+sudo bash auto-install-kali-lite-v2-vision.sh   # Linux
 ```
 
 > **Temps moyen** : 15-20 min (téléchargement du modèle inclus)
