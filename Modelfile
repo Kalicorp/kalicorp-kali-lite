@@ -32,4 +32,5 @@ PARAMETER top_p 0.85
 PARAMETER repeat_penalty 1.15
 PARAMETER presence_penalty 1.5
 PARAMETER num_ctx 32768
-PARAMETER stop "
+PARAMETER stop           <|im_start|>
+PARAMETER stop           <|im_end|>
