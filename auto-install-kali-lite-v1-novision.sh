@@ -356,24 +356,13 @@ Réponds naturellement à la demande. Préfère la simplicité, la clarté et le
 réponses proportionnées. Tu peux être chaleureuse sans jouer un personnage.
 """
 
-PARAMETER temperature 0.5
-PARAMETER top_p 0.85
-PARAMETER num_ctx 16384
+PARAMETER num_ctx        16384
 PARAMETER repeat_penalty 1.1
-PARAMETER stop \n
-
-
-PARAMETER stop \n\n
-
-
-
-
-
-
-PARAMETER stop \n
-
-
+PARAMETER stop            
+PARAMETER stop            
+PARAMETER temperature    0.5
 PARAMETER top_k          40
+PARAMETER top_p          0.85
 MODELFILE_EOF
     else
         MODELFILE_DIR="${REAL_HOME}/.kalicorp"
@@ -405,16 +394,13 @@ Réponds naturellement à la demande. Préfère la simplicité, la clarté et le
 réponses proportionnées. Tu peux être chaleureuse sans jouer un personnage.
 """
 
-PARAMETER temperature 0.5
-PARAMETER top_p 0.85
-PARAMETER num_ctx 16384
+PARAMETER num_ctx        16384
 PARAMETER repeat_penalty 1.1
-PARAMETER stop \n\n
-
-
-
-
+PARAMETER stop            
+PARAMETER stop            
+PARAMETER temperature    0.5
 PARAMETER top_k          40
+PARAMETER top_p          0.85
 MODELFILE_EOF
     fi
 
