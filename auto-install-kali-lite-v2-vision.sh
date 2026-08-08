@@ -472,6 +472,28 @@ else
     install_macos
 fi
 
+# ── Kali-Lite V2 Launcher ───────────────────────────────────────
+section "5/6 — Kali-Lite V2 Launcher"
+
+LAUNCHER_ALIAS="alias kali-lite-v2='ollama run --think=false kali-lite-v2'"
+
+if grep -qF "$LAUNCHER_ALIAS" "$SHELL_RC" 2>/dev/null; then
+    ok "Launcher already installed in $SHELL_RC"
+else
+    {
+        echo ""
+        echo "# kali-lite-v2 alias"
+        echo "$LAUNCHER_ALIAS"
+        echo "# end kali-lite-v2 alias"
+    } >> "$SHELL_RC"
+
+    if [[ $IS_LINUX -eq 1 && $EUID -eq 0 ]]; then
+        chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$SHELL_RC"
+    fi
+
+    ok "Launcher installed: kali-lite-v2"
+fi
+
 ok "V2 (qwen3.5:9b + Vision) setup complete!"
 info "Verify model status:"
 echo "  ollama list | grep kali-lite-v2"
