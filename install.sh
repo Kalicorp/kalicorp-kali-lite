@@ -191,8 +191,8 @@ terrain avant PowerPoint · souveraineté > commodité · non-extractif par prin
 
 PARAMETER num_ctx        16384
 PARAMETER repeat_penalty 1.1
-PARAMETER stop            
-PARAMETER stop            
+PARAMETER stop           <|im_start|>
+PARAMETER stop           <|im_end|>
 PARAMETER temperature    0.5
 PARAMETER top_k          40
 PARAMETER top_p          0.85
