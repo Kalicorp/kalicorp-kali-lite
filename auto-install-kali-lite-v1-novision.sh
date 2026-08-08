@@ -360,8 +360,19 @@ PARAMETER temperature 0.5
 PARAMETER top_p 0.85
 PARAMETER num_ctx 16384
 PARAMETER repeat_penalty 1.1
-PARAMETER stop  
-PARAMETER stop  
+PARAMETER stop \n
+
+
+PARAMETER stop \n\n
+
+
+
+
+
+
+PARAMETER stop \n
+
+
 PARAMETER top_k          40
 MODELFILE_EOF
     else
@@ -398,8 +409,11 @@ PARAMETER temperature 0.5
 PARAMETER top_p 0.85
 PARAMETER num_ctx 16384
 PARAMETER repeat_penalty 1.1
-PARAMETER stop  
-PARAMETER stop  
+PARAMETER stop \n\n
+
+
+
+
 PARAMETER top_k          40
 MODELFILE_EOF
     fi
