@@ -524,7 +524,7 @@ inject_alias() {
     cat >> "$SHELL_RC" <<'ALIASES'
 
 # ── Kalicorp — Kali-Lite V1 · Alias ──
-alias kali-lite='ollama run kali-lite'
+alias kali-lite='ollama run --think=false kali-lite'
 kali-lite-hardcore() {
   echo -e "${YELLOW}[!]${NC} Mode hardcore activé — permissions désactivées" >&2
   ollama run kali-lite --no-interact "$@"
@@ -571,7 +571,6 @@ print_summary() {
     echo -e "  Shell     : $SHELL_RC"
     echo ""
     echo -e "  ${CYAN}Next steps:${NC}"
-    echo -e "  ${BOLD}source $SHELL_RC${NC}"
     echo -e "  ${BOLD}kali-lite${NC}"
     echo ""
     echo -e "  Or direct Ollama chat:"
