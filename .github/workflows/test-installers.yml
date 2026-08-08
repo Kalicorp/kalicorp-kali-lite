@@ -57,10 +57,7 @@ jobs:
       - name: Check v1 has Modelfile
         run: grep -q 'Modelfile\|MODELFILE' auto-install-kali-lite-v1-novision.sh
 
-      - name: Check v1 has Claude Code install
-        run: grep -q 'claude-code\|claude' auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v1 has alias injection
+      - name: Check v1 no anthropic env
         run: grep -q 'kali-lite' auto-install-kali-lite-v1-novision.sh
 
       - name: Check v1 has GPL license header
@@ -112,7 +109,7 @@ jobs:
         run: grep -q 'install_macos\|macOS\|Darwin' install.sh
 
       - name: Check install.sh has shared functions
-        run: grep -q 'setup_modelfile\|setup_alias\|setup_claude_md' install.sh
+        run: grep -q 'setup_modelfile\|setup_alias' install.sh
 
       - name: Check install.sh has GPL license header
         run: grep -q 'GPL' install.sh

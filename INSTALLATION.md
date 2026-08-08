@@ -1,6 +1,6 @@
 # Kali-Lite V1 — Installation Guide
 
-Cross-platform installer for **Kali-Lite**, a sovereign, local-first AI assistant powered by Qwen 8B via Ollama + Claude Code.
+Cross-platform installer for **Kali-Lite**, a sovereign, local-first AI assistant powered by Qwen 8B via Ollama.
 
 ## Quick Start
 
@@ -71,14 +71,10 @@ bash install.sh
    - Injected identity, infrastructure context, operational scope
    - Located at : `/etc/kalicorp/Modelfile.kali-lite` (Linux) or `~/.kalicorp/Modelfile.kali-lite` (macOS)
 
-4. **Claude Code v2.1.138** — CLI AI tool
-   - Installed via `npm` (global)
-   - Configured to proxy Ollama API locally
-   - Telemetry and auto-updates disabled
 
 5. **Shell Alias** — Quick access
    ```bash
-   alias kali-lite='... claude'
+   alias kali-lite='ollama run kali-lite'
    ```
    Injected into `~/.bashrc` or `~/.zshrc`
 
@@ -106,9 +102,9 @@ bash install.sh
    ```bash
    kali-lite
    ```
-   This launches Claude Code connected to Kali-Lite model locally.
+   This launches the kali-lite model via Ollama locally.
 
-3. **Or use Ollama directly**
+2. **Ollama directement**
    ```bash
    ollama run kali-lite
    ```
@@ -157,11 +153,6 @@ tail -f ~/Library/Logs/kalicorp/ollama.log
   pkill ollama && sleep 2 && ollama serve > ~/Library/Logs/kalicorp/ollama.log 2>&1 &
   ```
 
-#### 2. "Claude Code command not found"
-
-```bash
-npm list -g @anthropic-ai/claude-code
-npm install -g @anthropic-ai/claude-code@2.1.138
 ```
 
 #### 3. "Permission denied" on Linux
@@ -241,21 +232,10 @@ ollama run kali-lite
 # Ollama daemon
 ollama list
 
-# Claude Code version
-claude --version
+/* Model status */
 
 # API health
 curl http://localhost:11434/api/tags
-```
-
-### Update Models
-
-```bash
-# Pull newer base model (if available)
-ollama pull qwen3:8b
-
-# Update Claude Code
-npm install -g @anthropic-ai/claude-code@latest
 ```
 
 ### Uninstall (Linux only)
@@ -265,7 +245,7 @@ sudo systemctl stop ollama
 sudo systemctl disable ollama
 sudo apt-get remove ollama
 sudo rm -rf /etc/kalicorp /var/log/kalicorp
-npm uninstall -g @anthropic-ai/claude-code
+ollama rm kali-lite
 ```
 
 ---

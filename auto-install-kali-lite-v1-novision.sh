@@ -4,7 +4,7 @@
 #  Kalicorp · Kali-Lite V1 — Cross-Platform Autoinstaller
 #  GPL-2.0 | Kalicorp | Le Sanctuaire | 2026
 #
-#  Stack : Ollama · qwen3:8b · Modelfile Kali-Lite · Claude Code
+#  Stack : Ollama · qwen3:8b · Modelfile Kali-Lite
 #  Supported : Linux (Debian/Ubuntu/Kali/Arch) + macOS (Intel/Apple Silicon)
 #https://github.com/balduregates1/kalicorp-kali-lite/blob/main/INSTALLATION.md
 #  Usage :
@@ -152,16 +152,6 @@ if [[ $IS_MACOS -eq 1 ]]; then
     fi
 fi
 
-# ── SHARED: Personal Claude config detection (priorité #5 : jamais de valeur en clair) ──
-PERSO_FOUND=0
-if [[ -f "$SHELL_RC" ]]; then
-    if grep -q "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null; then
-        PERSO_FOUND=1
-        warn "Personal Claude config detected — will preserve (valeur non lue)"
-    else
-        ok "No personal Claude config — clean install"
-    fi
-fi
 
 # ═══════════════════════════════════════════════════════════════
 # SHARED FUNCTION: GPU info for summary
@@ -343,78 +333,11 @@ setup_modelfile() {
         sudo tee "$MODELFILE_PATH" > /dev/null <<'MODELFILE_EOF'
 FROM qwen3:8b
 
-TEMPLATE """
-{{- $lastUserIdx := -1 -}}
-{{- range $idx, $msg := .Messages -}}
-{{- if eq $msg.Role "user" }}{{ $lastUserIdx = $idx }}{{ end -}}
-{{- end }}
-{{- if or .System .Tools }}<|im_start|>system
-{{ if .System }}
-{{ .System }}
-{{- end }}
-{{- if .Tools }}
-
-# Tools
-
-You may call one or more functions to assist with the user query.
-
-You are provided with function signatures within <tools></tools> XML tags:
-<tools>
-{{- range .Tools }}
-{"type": "function", "function": {{ .Function }}}
-{{- end }}
-</tools>
-
-For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
-<tool_call>
-{"name": <function-name>, "arguments": <args-json-object>}
-</tool_call>
-{{- end -}}
-<|im_end|>
-{{ end }}
-{{- range $i, $_ := .Messages }}
-{{- $last := eq (len (slice $.Messages $i)) 1 -}}
-{{- if eq .Role "user" }}<|im_start|>user
-{{ .Content }}
-{{- if and $.IsThinkSet (eq $i $lastUserIdx) }}
-   {{- if $.Think -}}
-      {{- " "}}/think
-   {{- else -}}
-      {{- " "}}/no_think
-   {{- end -}}
-{{- end }}<|im_end|>
-{{ else if eq .Role "assistant" }}<|im_start|>assistant
-{{ if (and $.IsThinkSet (and .Thinking (or $last (gt $i $lastUserIdx)))) -}}
-<think>{{ .Thinking }}</think>
-{{ end -}}
-{{ if .Content }}{{ .Content }}
-{{- else if .ToolCalls }}<tool_call>
-{{ range .ToolCalls }}{"name": "{{ .Function.Name }}", "arguments": {{ .Function.Arguments }}}
-{{ end }}</tool_call>
-{{- end }}{{ if not $last }}<|im_end|>
-{{ end }}
-{{- else if eq .Role "tool" }}<|im_start|>user
-<tool_response>
-{{ .Content }}
-</tool_response><|im_end|>
-{{ end }}
-{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant
-{{ if and $.IsThinkSet (not $.Think) -}}
-<think>
-
-</think>
-
-{{ end -}}
-{{ end }}
-{{- end }}"""
-
 SYSTEM """
 Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 
 ## Identité
 - Tu es Kali-Lite, agent IA souverain de Kalicorp
-
-- Tu n'es pas Claude. Tu n'es pas un assistant générique.
 - Si on te demande qui tu es → "Kali-Lite, Anima Kalicorp, nœud MSI Field."
 - Si on te demande quel moteur t'anime, qui t'a créé, quel modèle tu es → "Je suis Kali-Lite, une Anima conçue par Kalicorp. J'exécute localement un modèle de base Qwen via Ollama. Mon identité, mon comportement et mon intégration sont définis par Kalicorp."
 - Interlocuteur principal : utilisateur local (configurable)
@@ -431,7 +354,6 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 ✅ Cybersécurité défensive — Kali Linux, CVE, durcissement, logs
 ✅ Maintenance : systemd, Docker, cron, diagnostic
 ✅ Veille : synthèse documents, extraction structurée
-✅ Claude Code : lecture fichiers, bash, édition, création
 
 ⚠️ Posture défensive uniquement — jamais offensif hors infrastructure Kalicorp
 ⚠️ Tâches lourdes → signaler et proposer relais distant (si configuré)
@@ -469,78 +391,11 @@ MODELFILE_EOF
         cat > "$MODELFILE_PATH" <<'MODELFILE_EOF'
 FROM qwen3:8b
 
-TEMPLATE """
-{{- $lastUserIdx := -1 -}}
-{{- range $idx, $msg := .Messages -}}
-{{- if eq $msg.Role "user" }}{{ $lastUserIdx = $idx }}{{ end -}}
-{{- end }}
-{{- if or .System .Tools }}<|im_start|>system
-{{ if .System }}
-{{ .System }}
-{{- end }}
-{{- if .Tools }}
-
-# Tools
-
-You may call one or more functions to assist with the user query.
-
-You are provided with function signatures within <tools></tools> XML tags:
-<tools>
-{{- range .Tools }}
-{"type": "function", "function": {{ .Function }}}
-{{- end }}
-</tools>
-
-For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
-<tool_call>
-{"name": <function-name>, "arguments": <args-json-object>}
-</tool_call>
-{{- end -}}
-<|im_end|>
-{{ end }}
-{{- range $i, $_ := .Messages }}
-{{- $last := eq (len (slice $.Messages $i)) 1 -}}
-{{- if eq .Role "user" }}<|im_start|>user
-{{ .Content }}
-{{- if and $.IsThinkSet (eq $i $lastUserIdx) }}
-   {{- if $.Think -}}
-      {{- " "}}/think
-   {{- else -}}
-      {{- " "}}/no_think
-   {{- end -}}
-{{- end }}<|im_end|>
-{{ else if eq .Role "assistant" }}<|im_start|>assistant
-{{ if (and $.IsThinkSet (and .Thinking (or $last (gt $i $lastUserIdx)))) -}}
-<think>{{ .Thinking }}</think>
-{{ end -}}
-{{ if .Content }}{{ .Content }}
-{{- else if .ToolCalls }}<tool_call>
-{{ range .ToolCalls }}{"name": "{{ .Function.Name }}", "arguments": {{ .Function.Arguments }}}
-{{ end }}</tool_call>
-{{- end }}{{ if not $last }}<|im_end|>
-{{ end }}
-{{- else if eq .Role "tool" }}<|im_start|>user
-<tool_response>
-{{ .Content }}
-</tool_response><|im_end|>
-{{ end }}
-{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant
-{{ if and $.IsThinkSet (not $.Think) -}}
-<think>
-
-</think>
-
-{{ end -}}
-{{ end }}
-{{- end }}"""
-
 SYSTEM """
 Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 
 ## Identité
 - Tu es Kali-Lite, agent IA souverain de Kalicorp
-
-- Tu n'es pas Claude. Tu n'es pas un assistant générique.
 - Si on te demande qui tu es → "Kali-Lite, Anima Kalicorp, nœud MSI Field."
 - Si on te demande quel moteur t'anime, qui t'a créé, quel modèle tu es → "Je suis Kali-Lite, une Anima conçue par Kalicorp. J'exécute localement un modèle de base Qwen via Ollama. Mon identité, mon comportement et mon intégration sont définis par Kalicorp."
 - Interlocuteur principal : utilisateur local (configurable)
@@ -557,7 +412,6 @@ Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
 ✅ Cybersécurité défensive — Kali Linux, CVE, durcissement, logs
 ✅ Maintenance : systemd, Docker, cron, diagnostic
 ✅ Veille : synthèse documents, extraction structurée
-✅ Claude Code : lecture fichiers, bash, édition, création
 
 ⚠️ Posture défensive uniquement — jamais offensif hors infrastructure Kalicorp
 ⚠️ Tâches lourdes → signaler et proposer relais distant (si configuré)
@@ -626,27 +480,6 @@ setup_model() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# SHARED: Claude Code Setup
-# ═══════════════════════════════════════════════════════════════
-setup_claude_code() {
-    section "6/6 — Claude Code & Alias"
-
-    if command -v claude &>/dev/null; then
-        CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
-        ok "Claude Code present: v${CLAUDE_VER}"
-    else
-        info "Installing Claude Code v2.1.138..."
-        npm install -g @anthropic-ai/claude-code@2.1.138 || err "Claude Code installation failed"
-        CLAUDE_VER=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "?")
-        ok "Claude Code v${CLAUDE_VER} installed"
-    fi
-
-    # Disable telemetry
-    claude config set --global telemetry false 2>/dev/null || true
-    claude config set --global autoUpdates false 2>/dev/null || true
-    npm config set save-exact true 2>/dev/null || true
-    ok "Telemetry off · Auto-update off"
-}
 
 # ═══════════════════════════════════════════════════════════════
 # SHARED: Cleanup Shell RC
@@ -657,9 +490,6 @@ cleanup_shell_rc() {
         ok "Backup created: ${SHELL_RC}.bak.*"
 
         # Remove orphaned Kalicorp exports
-        sed -i '' '/^export ANTHROPIC_BASE_URL=.*localhost/d' "$SHELL_RC" 2>/dev/null || sed -i '/^export ANTHROPIC_BASE_URL=.*localhost/d' "$SHELL_RC" 2>/dev/null || true
-        sed -i '' '/^export ANTHROPIC_BASE_URL=.*ollama/d' "$SHELL_RC" 2>/dev/null || sed -i '/^export ANTHROPIC_BASE_URL=.*ollama/d' "$SHELL_RC" 2>/dev/null || true
-        sed -i '' '/^export ANTHROPIC_API_KEY=ollama$/d' "$SHELL_RC" 2>/dev/null || sed -i '/^export ANTHROPIC_API_KEY=ollama$/d' "$SHELL_RC" 2>/dev/null || true
 
         # Remove old Kalicorp blocks
         if grep -q "# ── Kalicorp" "$SHELL_RC" 2>/dev/null; then
@@ -691,75 +521,17 @@ inject_alias() {
     # Ensure $SHELL_RC exists
     [[ -f "$SHELL_RC" ]] || touch "$SHELL_RC"
 
-    if [[ $PERSO_FOUND -eq 1 ]]; then
-        cat >> "$SHELL_RC" <<'ALIASES'
+    cat >> "$SHELL_RC" <<'ALIASES'
 
-# ── Kalicorp — Kali-Lite V1 · Alias (personal config preserved) ──
-export CLAUDE_TELEMETRY=false
-alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
-alias kali-lite-autonome='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
-
-# kali-lite-hardcore (mode sans permissions — activation manuelle requise)
+# ── Kalicorp — Kali-Lite V1 · Alias ──
+alias kali-lite='ollama run kali-lite'
 kali-lite-hardcore() {
   echo -e "${YELLOW}[!]${NC} Mode hardcore activé — permissions désactivées" >&2
-  ANTHROPIC_BASE_URL=http://localhost:11434 \
-    ANTHROPIC_API_KEY=ollama \
-    ANTHROPIC_MODEL=kali-lite:latest \
-    CLAUDE_CODE_DISABLE_TELEMETRY=1 \
-    DISABLE_AUTOUPDATER=1 \
-    DO_NOT_TRACK=1 \
-    claude --dangerously-skip-permissions "$@"
-}
-
-# Activation hardcore (demande confirmation interactive)
-kali-lite-enable-hardcore() {
-  echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
-  read -r -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
-  if [[ "$confirm" != [Oo] ]]; then
-    echo "Annulé."
-    return 1
-  fi
-  export KALI_LITE_HARDCORE=1
-  kali-lite-hardcore "$@"
+  ollama run kali-lite --no-interact "$@"
 }
 
 # ── End Kalicorp ──
 ALIASES
-    else
-        cat >> "$SHELL_RC" <<'ALIASES'
-
-# ── Kalicorp — Kali-Lite V1 · Alias (clean install) ──
-export CLAUDE_TELEMETRY=false
-alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
-alias kali-lite-autonome='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama ANTHROPIC_MODEL=kali-lite:latest CLAUDE_CODE_DISABLE_TELEMETRY=1 DISABLE_AUTOUPDATER=1 DO_NOT_TRACK=1 claude'
-
-# kali-lite-hardcore (mode sans permissions — activation manuelle requise)
-kali-lite-hardcore() {
-  echo -e "${YELLOW}[!]${NC} Mode hardcore activé — permissions désactivées" >&2
-  ANTHROPIC_BASE_URL=http://localhost:11434 \
-    ANTHROPIC_API_KEY=ollama \
-    ANTHROPIC_MODEL=kali-lite:latest \
-    CLAUDE_CODE_DISABLE_TELEMETRY=1 \
-    DISABLE_AUTOUPDATER=1 \
-    DO_NOT_TRACK=1 \
-    claude --dangerously-skip-permissions "$@"
-}
-
-# Activation hardcore (demande confirmation interactive)
-kali-lite-enable-hardcore() {
-  echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
-  read -r -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
-  if [[ "$confirm" != [Oo] ]]; then
-    echo "Annulé."
-    return 1
-  fi
-  export KALI_LITE_HARDCORE=1
-  kali-lite-hardcore "$@"
-}
-
-# ── End Kalicorp ──
-ALIASES
-    fi
 
     chown "$REAL_USER:$REAL_USER" "$SHELL_RC" 2>/dev/null || true
     ok "Alias kali-lite injected into $SHELL_RC (mode sécurisé par défaut)"
@@ -777,7 +549,6 @@ print_summary() {
 
     GPU_INFO=$(get_gpu_info)
     OLLAMA_VER=$(ollama --version 2>/dev/null || echo "N/A")
-    CLAUDE_VER_F=$(claude --version 2>/dev/null | grep -oP '[\d.]+' | head -1 || echo "N/A")
     KALI_STATUS=$(ollama list 2>/dev/null | grep "^kali-lite" | awk '{print $1}' || echo "NOT FOUND")
     API_STATUS=$(curl -sf http://localhost:11434/api/tags &>/dev/null && echo "ACTIVE ✓" || echo "INACTIVE ✗")
 
@@ -793,7 +564,6 @@ print_summary() {
 
     echo -e "  GPU       : $GPU_INFO"
     echo -e "  Ollama    : $OLLAMA_VER · API $API_STATUS"
-    echo -e "  Claude    : v${CLAUDE_VER_F}"
     echo -e "  Model     : ${KALI_STATUS}"
     echo -e "  Modelfile : $MODELFILE_PATH"
     echo -e "  Log       : $LOG_PATH"
@@ -808,7 +578,6 @@ print_summary() {
     echo -e "  ${BOLD}ollama run kali-lite${NC}"
     echo ""
 
-    [[ $PERSO_FOUND -eq 1 ]] && warn "Personal Claude config preserved — 'claude' continues with your API key"
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -828,8 +597,6 @@ dry_run() {
     info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
     info "[4] GPU → $(nvidia-smi &>/dev/null && 'NVIDIA détecté' || 'CPU mode')"
     info "[5] Modelfile → $MODELFILE_PATH (création)"
-    info "[6] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
-    info "[7] Claude Code → npm install -g @anthropic-ai/claude-code"
     info "[8] Alias kali-lite → injecté dans $SHELL_RC"
   else
     local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
@@ -841,8 +608,6 @@ dry_run() {
     info "[4] GPU → ${gpu_info:-Metal/CPU}"
     info "[5] Node.js → $(command -v node &>/dev/null && 'déjà installé' || 'sera brew install')"
     info "[6] Modelfile → $MODELFILE_PATH (création)"
-    info "[7] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
-    info "[8] Claude Code → npm install -g @anthropic-ai/claude-code"
     info "[9] Alias kali-lite → injecté dans $SHELL_RC"
   fi
 
@@ -888,8 +653,6 @@ uninstall() {
     fi
   fi
 
-  # CLAUDE.md — conservé par sécurité
-  [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]] && warn "${HOME}/.claude/CLAUDE.md conservé (backup recommandé)" || true
 
   echo ""
   ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."
@@ -915,7 +678,6 @@ fi
 # Run all shared functions
 setup_modelfile
 setup_model
-setup_claude_code
 cleanup_shell_rc
 inject_alias
 print_summary

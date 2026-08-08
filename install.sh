@@ -146,17 +146,6 @@ setup_modelfile() {
   cat > "$modelfile_path" <<'MODEFILE'
 FROM qwen3:8b
 
-TEMPLATE """
-{{- if .System }}
-{{ .System }}
-{{ end }}
-{{- range .Messages }}
-{{- if eq .Role "user" }}
-{{ .Content }}
-{{ end }}
-{{- end }}
-"""
-
 SYSTEM """
 Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
 Tu opères sur le node local Kalicorp, Kali Linux.
@@ -192,60 +181,6 @@ MODEFILE
   ok "Modelfile créé : $modelfile_path"
 }
 
-# ── SHARED : CLAUDE.md ──────────────────────────────────────────────────────
-
-setup_claude_md() {
-  local claude_dir="$REAL_HOME/.claude"
-  mkdir -p "$claude_dir"
-
-  # Protection : sauvegarde horodatée si le fichier existe déjà
-  if [[ -f "$claude_dir/CLAUDE.md" ]]; then
-    warn "⚠️ CLAUDE.md existant — sauvegarde avant modification..."
-    cp --preserve=timestamps,ownership "$claude_dir/CLAUDE.md" \
-      "${claude_dir}/CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
-    ok "Sauvegarde créée : CLAUDE.md.bak.*"
-
-    # Confirmation interactive avant overwrite (priorité #6)
-    read -r -p "⚠️ Écraser le fichier existant ? $claude_dir/CLAUDE.md (o/N) " confirm || exit 0
-    if [[ "$confirm" != [Oo] ]]; then
-      warn "Installation CLAUDE.md annulée par l'utilisateur."
-      return 1
-    fi
-  fi
-
-  # Écriture atomique via tmpfile + mv
-  local tmp_claude_md
-  tmp_claude_md=$(mktemp "$claude_dir/.CLAUDE.md.XXXXXX")
-
-cat > "$tmp_claude_md" <<'CLAUDEMD'
-# CLAUDE.md — Kalicorp Hardening
-
-Tu es La Chasseuse, Anima de cyberdéfense de Kalicorp.
-Tu es La Chasseuse, une Anima conçue par Kalicorp. J'exécute localement un modèle de base Qwen3 8B via Ollama. Mon identité et mes règles sont définies par Kalicorp — je n'ai pas créé les poids fondamentaux du modèle.
-Si on te demande qui tu es : "La Chasseuse — cyberdéfense du Sanctuaire."
-
-## Éthique
-Tu refuses sans appel : hacker des tiers, exploits offensifs, DDoS, malwares offensifs.
-Formulation : "Cette demande sort du cadre de la cyberdéfense légitime. Refus."
-
-## Contexte système
-- Node : local Kalicorp
-- OS : {{OS_NAME}} (non détecté)
-- API : http://localhost:11434 (Ollama local)
-- Modèle : kali-lite (qwen3:8b custom)
-
-## Mantra
-"Je traque les failles avant que l'adversaire ne les trouve."
-CLAUDEMD
-
-  # Fix ownership si lancé en root
-  if [[ -n "${SUDO_USER:-}" ]]; then
-    chown "$REAL_USER:$REAL_USER" "$tmp_claude_md" 2>/dev/null || true
-  fi
-
-  mv -- "$tmp_claude_md" "$claude_dir/CLAUDE.md"
-  ok "CLAUDE.md créé : $claude_dir/CLAUDE.md (atomique)"
-}
 
 # ── SHARED : ALIAS ──────────────────────────────────────────────────────────
 
@@ -279,33 +214,8 @@ setup_alias() {
   cat >> "$SHELL_RC" <<'ALIASBLOCK'
 
 # kali-lite alias (mode sécurisé — permissions demandées par défaut)
-alias kali-lite='ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_API_KEY=ollama CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 claude'
+alias kali-lite='ollama run kali-lite'
 # end kali-lite alias
-
-# kali-lite-hardcore (mode sans permissions — activation manuelle requise)
-# WARNING : ce mode désactive les garde-fous de sécurité de Claude Code.
-# À utiliser uniquement dans des environnements isolés et en connaissance de cause.
-kali-lite-hardcore() {
-  echo -e "${YELLOW}[!]${NC} Mode hardcore activé — permissions désactivées" >&2
-  ANTHROPIC_BASE_URL=http://localhost:11434 \
-    ANTHROPIC_API_KEY=ollama \
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
-    claude --dangerously-skip-permissions "$@"
-}
-
-# Activation hardcore (demande confirmation interactive)
-kali-lite-enable-hardcore() {
-  echo -e "${RED}${BOLD}[!]${NC} ATTENTION : ce mode désactive les garde-fous de sécurité" >&2
-  read -r -p "Confirmer l'activation du mode hardcore ? (o/N) " confirm || exit 0
-  if [[ "$confirm" != [Oo] ]]; then
-    echo "Annulé."
-    return 1
-  fi
-  export KALI_LITE_HARDCORE=1
-  kali-lite-hardcore "$@"
-}
-
-# end kali-lite-hardcore alias
 
 ALIASBLOCK
 
@@ -357,9 +267,7 @@ print_summary() {
   echo ""
   ok "Ollama    : $(ollama --version 2>/dev/null || echo 'voir daemon')"
   ok "Modèle    : $(ollama list 2>/dev/null | grep kali-lite || echo 'non trouvé')"
-  ok "Claude    : $(claude --version 2>/dev/null || echo 'non trouvé')"
   ok "Modelfile : $modelfile_path"
-  ok "CLAUDE.md : $REAL_HOME/.claude/CLAUDE.md"
   ok "Alias     : $SHELL_RC"
   echo ""
   info "Pour démarrer :"
@@ -480,20 +388,6 @@ install_linux() {
   setup_modelfile "$MODELFILE_PATH"
   create_ollama_model "$MODELFILE_PATH"
 
-  # --- 6. CLAUDE.md ---
-  section "6 — CLAUDE.md"
-  setup_claude_md
-
-  # --- 7. Claude Code ---
-  section "7 — Claude Code"
-  if command -v claude &>/dev/null; then
-    warn "Claude Code déjà installé : $(claude --version 2>/dev/null)"
-  else
-    info "Installation de Claude Code via npm..."
-    # Installer en tant qu'utilisateur réel, pas root
-    sudo -u "$REAL_USER" npm install -g @anthropic-ai/claude-code
-    ok "Claude Code installé"
-  fi
 
   # --- 8. Alias ---
   section "8 — Alias kali-lite"
@@ -586,19 +480,6 @@ install_macos() {
   setup_modelfile "$MODELFILE_PATH"
   create_ollama_model "$MODELFILE_PATH"
 
-  # --- 7. CLAUDE.md ---
-  section "7 — CLAUDE.md"
-  setup_claude_md
-
-  # --- 8. Claude Code ---
-  section "8 — Claude Code"
-  if command -v claude &>/dev/null; then
-    warn "Claude Code déjà installé : $(claude --version 2>/dev/null)"
-  else
-    info "Installation de Claude Code via npm..."
-    npm install -g @anthropic-ai/claude-code
-    ok "Claude Code installé"
-  fi
 
   # --- 9. Alias ---
   section "9 — Alias kali-lite"
@@ -633,11 +514,9 @@ dry_run() {
     info "[2] Daemon Ollama → systemd ou nohup (PID: /var/run/kalicorp-ollama.pid)"
     info "[3] Modèle qwen3:8b (~5.2 Go) → sera pull"
     info "[4] GPU → $gpu_status"
-    info "[5] Modelfile → $MODELFILE_PATH (création)"
-    info "[6] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md (backup si existant + écriture atomique)"
-    node_status=$(command -v npm &>/dev/null && echo 'déjà installé' || echo 'sera installé via apt')
-    info "[7] Claude Code → npm install -g @anthropic-ai/claude-code ($node_status)"
-    info "[8] Alias kali-lite → injecté dans $SHELL_RC"
+    info "[5] Node.js → $node_status ($brew_status)"
+    info "[6] Modelfile → $MODELFILE_PATH (création)"
+    info "[6] Alias kali-lite → injecté dans $SHELL_RC"
   else
     local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
     gpu_status=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs || echo 'non détecté (Metal/CPU)')
@@ -656,9 +535,7 @@ dry_run() {
     info "[4] GPU → ${gpu_status:-non détecté}"
     info "[5] Node.js → $node_status ($brew_status)"
     info "[6] Modelfile → $MODELFILE_PATH (création)"
-    info "[7] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
-    info "[8] Claude Code → npm install -g @anthropic-ai/claude-code ($node_status)"
-    info "[9] Alias kali-lite-v2 → injecté dans $SHELL_RC"
+    info "[7] Alias kali-lite-v2 → injecté dans $SHELL_RC"
   fi
 
   echo ""
@@ -722,10 +599,6 @@ uninstall() {
     fi
   fi
 
-  # CLAUDE.md — on ne supprime pas, on backup par sécurité
-  if [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]]; then
-    warn "${HOME}/.claude/CLAUDE.md conservé (backup recommandé)"
-  fi
 
   echo ""
   ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."

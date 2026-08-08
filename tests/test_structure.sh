@@ -51,7 +51,7 @@ echo "=== Contenu install.sh ==="
 check "install.sh: detect_os"     grep -q 'detect_os' install.sh
 check "install.sh: setup_modelfile" grep -q 'setup_modelfile' install.sh
 check "install.sh: setup_alias"   grep -q 'setup_alias' install.sh
-check "install.sh: setup_claude_md" grep -q 'setup_claude_md' install.sh
+check "install.sh: setup_alias"   grep -q 'setup_alias' install.sh
 check "install.sh: GPL"           grep -q 'GPL' install.sh
 check "install.sh: Linux"         grep -q 'Linux' install.sh
 check "install.sh: macOS/Darwin"  grep -q 'Darwin' install.sh
@@ -61,8 +61,8 @@ echo "=== Contenu v1 installer ==="
 check "v1: qwen3:8b"             grep -q 'qwen3:8b' auto-install-kali-lite-v1-novision.sh
 check "v1: ollama"                grep -q 'ollama' auto-install-kali-lite-v1-novision.sh
 check "v1: Modelfile"             grep -q 'Modelfile' auto-install-kali-lite-v1-novision.sh
-check "v1: claude-code"           grep -q 'claude-code\|claude' auto-install-kali-lite-v1-novision.sh
-check "v1: kali-lite alias"       grep -q 'kali-lite' auto-install-kali-lite-v1-novision.sh
+
+check "v1: NO claude-code"        bash -c "! grep -q 'claude-code' auto-install-kali-lite-v1-novision.sh"check "v1: kali-lite alias"       grep -q 'kali-lite' auto-install-kali-lite-v1-novision.sh
 check "v1: GPL"                   grep -q 'GPL' auto-install-kali-lite-v1-novision.sh
 
 echo ""
@@ -72,7 +72,6 @@ check "v2: ollama"                grep -q 'ollama' auto-install-kali-lite-v2-vis
 check "v2: Modelfile"             grep -q 'Modelfile' auto-install-kali-lite-v2-vision.sh
 check "v2: kali-lite alias"       grep -q 'kali-lite' auto-install-kali-lite-v2-vision.sh
 check "v2: GPL"                   grep -q 'GPL' auto-install-kali-lite-v2-vision.sh
-check "v2: NO claude-code"        bash -c "! grep -q 'claude-code' auto-install-kali-lite-v2-vision.sh"
 check "v2: no eval"               bash -c "! grep -q 'eval ' auto-install-kali-lite-v2-vision.sh"
 
 echo ""

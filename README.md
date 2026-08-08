@@ -90,7 +90,7 @@ sudo bash auto-install-kali-lite-v2-vision.sh   # Linux
 
 - **Inférence locale** — Ollama et les modèles restent sur la machine après installation
 - **Identité Kalicorp** — Anima du Sanctuaire intégrée
-- **Claude Code optionnel pour la V1** — connexion à Ollama local, avec permissions conservées par défaut
+- **Kali-Lite (Ollama local)** — connexion à Ollama local, avec permissions conservées par défaut
 - **Cross-platform** — Linux (Kali/Debian/Ubuntu/Arch) + macOS (Intel/Apple Silicon)
 - **Frugalité extrême** — tourne sur laptop 8 Go VRAM
 - **RGPD & AI Act** — conçu pour faciliter un déploiement local et la maîtrise des données. La conformité complète dépend du contexte d'utilisation, de la gouvernance et des obligations applicables à l'opérateur.

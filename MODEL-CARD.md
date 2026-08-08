@@ -57,7 +57,7 @@ Une orientation facultative : développement, pédagogie, vision, cyberdéfense,
 
 ### 4. Harnais d'exécution
 
-L'environnement qui relie l'Anima aux outils : Ollama, Claude Code, Hermes, OpenCLI, vLLM, MCP ou une intégration locale équivalente.
+L'environnement qui relie l'Anima aux outils : Ollama,, Hermes, OpenCLI, vLLM, MCP ou une intégration locale équivalente.
 
 Voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

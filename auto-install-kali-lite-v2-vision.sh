@@ -398,7 +398,6 @@ dry_run() {
     info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
     info "[4] GPU → $(nvidia-smi &>/dev/null && 'NVIDIA détecté' || 'CPU mode')"
     info "[5] Modelfile → $MODELFILE_PATH (création)"
-    info "[6] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
     info "[7] Alias kali-lite-v2 → injecté dans $SHELL_RC"
   else
     local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
@@ -410,7 +409,6 @@ dry_run() {
     info "[4] GPU → ${gpu_info:-Metal/CPU}"
     info "[5] Node.js → $(command -v node &>/dev/null && 'déjà installé' || 'sera brew install')"
     info "[6] Modelfile → $MODELFILE_PATH (création)"
-    info "[7] CLAUDE.md → $REAL_HOME/.claude/CLAUDE.md"
     info "[8] Alias kali-lite-v2 → injecté dans $SHELL_RC"
   fi
 
@@ -456,8 +454,6 @@ uninstall() {
     fi
   fi
 
-  # CLAUDE.md — conservé par sécurité
-  [[ -f "$REAL_HOME/.claude/CLAUDE.md" ]] && warn "${HOME}/.claude/CLAUDE.md conservé (backup recommandé)" || true
 
   echo ""
   ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."

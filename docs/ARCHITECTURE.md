@@ -52,7 +52,7 @@ Une spécialité ne doit pas contourner la doctrine.
 Le harnais relie l'Anima aux outils et à la mémoire :
 
 - Ollama ;
-- Claude Code ;
+- ;
 - Hermes ;
 - OpenCLI ;
 - vLLM ;
