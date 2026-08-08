@@ -194,9 +194,9 @@ install_linux() {
             ok "Ollama active via systemd (persistent across reboots)"
         else
             warn "systemd inactive — starting manually..."
-            bash -c "nohup ollama serve > $OLLAMA_LOG 2>&1 & echo \$!" | sudo tee "$OLLAMA_PID" >/dev/null
-            echo $! | sudo tee "$OLLAMA_PID" > /dev/null
-            ok "Daemon started (PID: $!, log: $OLLAMA_LOG)"
+            DAEMON_PID="$(bash -c "nohup ollama serve > '$OLLAMA_LOG' 2>&1 & echo \$!")"
+            sudo tee "$OLLAMA_PID" >/dev/null <<< "$DAEMON_PID"
+            ok "Daemon started (PID: $DAEMON_PID, log: $OLLAMA_LOG)"
             sleep 3
         fi
     else
@@ -665,9 +665,6 @@ if [[ "${1:-}" == "--dry-run" ]]; then dry_run; fi
 if [[ "${1:-}" == "--uninstall" ]]; then uninstall; fi
 
 # ── Mode normal : installation complète ────────────────────────
-detect_os
-detect_real_user
-
 if [[ $IS_LINUX -eq 1 ]]; then
     install_linux
 else
