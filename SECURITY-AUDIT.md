@@ -1,377 +1,762 @@
-# SECURITY AUDIT — kalicorp-kali-lite
+# SECURITY AUDIT — Kali-Lite
 
-**Date :** 2026-07-19  
-**Auditeur :** La Chasseuse (Anima cyberdéfense Kalicorp)  
-**État opérationnel :** ⚔️ ACTION  
-**Score de suspicion :** N/A (audit proactif initié par Thibaut.N)
-
----
-
-## Méthodologie
-
-- Analyse statique des 3 installers (`install.sh`, `auto-install-kali-lite-v1-novision.sh`, `auto-install-kali-lite-v2-vision.sh`)
-- Scan d'historique Git complet (52 commits, ~224 Ko) via Gitleaks v8.24.0 sur toutes les branches
-- Vérification `.gitignore` vs fichiers potentiellement exposés
-- Revue des patterns de privilèges, téléchargements et gestion de secrets
-
----
-
-## CRITIQUE — Priorité 1 : `--dangerously-skip-permissions` dans l'alias par défaut
-
-**Sévérité :** 🔴 **CRITIQUE**  
-**Score CVSS estimé :** 9.0 (confiance aveugle, élévation de privilèges implicite)
-
-### Preuve
-
-| Fichier | Ligne | Contenu |
-|---------|-------|---------|
-| `install.sh` | 191 | `alias kali-lite='... claude --dangerously-skip-permissions'` |
-| `auto-install-kali-lite-v1-novision.sh` | 638 | idem + variables d'environnement supplémentaires |
-| `auto-install-kali-lite-v1-novision.sh` | 646 | variante avec `ANTHROPIC_AUTH_TOKEN=""` |
-
-### Analyse
-
-L'alias injecté dans le `.zshrc`/`.bashrc` de l'utilisateur lance Claude Code **sans aucune vérification des permissions** sur les fichiers du système. Cela signifie que toute exécution via `kali-lite` donne un accès complet au filesystem, aux commandes shell et à toutes les ressources locales sans dialogue utilisateur.
-
-### Correction requise
-
-1. Supprimer `--dangerously-skip-permissions` de l'alias par défaut
-2. Créer un alias alternatif séparé : `kali-lite-autonome` (optionnel) avec avertissement explicite avant activation
-3. Afficher un warning clair dans le résumé d'installation indiquant que les permissions seront demandées interactivement
+> **AUDIT HISTORIQUE — ÉTAT INITIAL DU 19/07/2026**
+>
+> Ce document conserve les constats de sécurité identifiés lors de l'audit du 19 juillet 2026.
+>
+> Il a été **révisé le 9 septembre 2026** afin de distinguer clairement :
+>
+> - les vulnérabilités historiques ;
+> - les corrections réalisées ;
+> - les décisions d'architecture assumées ;
+> - la dette technique encore ouverte.
+>
+> **Les exemples de code vulnérable présentés dans ce document ne décrivent plus nécessairement les installateurs actuellement publiés sur `main`.**
 
 ---
 
-## CRITIQUE — Priorité 5 : Lecture de la valeur `ANTHROPIC_API_KEY`
+## Identification
 
-**Sévérité :** 🔴 **CRITIQUE**  
-**Score CVSS estimé :** 8.6 (confidentialité des secrets)
-
-### Preuve
-
-| Fichier | Ligne | Pattern |
-|---------|-------|---------|
-| `auto-install-kali-lite-v1-novision.sh` | 98-99 | `PERSO_KEY=$(grep ... ANTHROPIC_API_KEY=... \| sed 's/^export ANTHROPIC_API_KEY=//' \| tr -d '"')` |
-| `auto-install-kali-lite-v2-vision.sh` | 99 | idem (copié) |
-
-### Analyse
-
-Le script **lit la valeur complète** de `ANTHROPIC_API_KEY` depuis le `.zshrc`/`.bashc` utilisateur et la stocke dans une variable shell (`PERSO_KEY`). Bien que cette valeur ne soit pas affichée publiquement, elle est :
-- Stockée en clair dans une variable d'environnement du processus d'installation (visible via `/proc/$$/environ`)
-- Transmise implicitement aux sous-processus par héritage environnemental
-
-### Correction requise
-
-1. Détecter uniquement la **présence** de `ANTHROPIC_API_KEY` sans lire sa valeur :
-   ```bash
-   if grep -q "^export ANTHROPIC_API_KEY=" "$SHELL_RC" 2>/dev/null; then
-       PERSONAL_CONFIG=1
-   fi
-   ```
-2. Ne jamais stocker la valeur dans une variable shell
-3. Ne jamais la passer à un sous-processus
+| Élément | Valeur |
+|---|---|
+| **Projet** | `Kalicorp/kalicorp-kali-lite` |
+| **Audit initial** | 2026-07-19 |
+| **Révision du statut** | 2026-09-09 |
+| **Auditeur initial** | La Chasseuse — Anima cyberdéfense Kalicorp |
+| **Nature** | Audit proactif |
+| **Branche de référence actuelle** | `main` |
+| **Commit de révalidation documentaire** | `10f30ecdee08d427e47f6adbba9b2d9eda9e97ac` |
 
 ---
 
-## HAUTE — Priorité 6 : Écrasement de `~/.claude/CLAUDE.md` sans sauvegarde
+# 1. Objet du document
 
-**Sévérité :** 🟡 **HAUTE**  
-**Score CVSS estimé :** 7.5 (intégrité, perte de configuration utilisateur)
+L'objectif de cet audit était d'examiner principalement :
 
-### Preuve
+```text
+install.sh
+auto-install-kali-lite-v1-novision.sh
+auto-install-kali-lite-v2-vision.sh
+```
 
-| Fichier | Ligne | Pattern |
-|---------|-------|---------|
-| `install.sh` | 145-173 | `cat > "$claude_dir/CLAUDE.md" <<'CLAUDEMD'` — écriture directe sans backup ni confirmation |
-| `auto-install-kali-lite-v1-novision.sh` | ~600+ | idem (fonction setup_claude_md) |
+ainsi que :
 
-### Analyse
+- la gestion des permissions ;
+- les téléchargements distants ;
+- les secrets ;
+- les fichiers utilisateur ;
+- les dépendances ;
+- la reproductibilité ;
+- les affirmations de sécurité ;
+- la CI ;
+- l'historique Git.
 
-Le script écrase systématiquement `~/.claude/CLAUDE.md` existant. Si l'utilisateur avait une configuration personnalisée, elle est **perdue sans sauvegarde**. Aucune confirmation n'est demandée.
+Le document d'origine constituait une **photographie de l'état du dépôt au 19 juillet 2026**.
 
-### Correction requise
-
-1. Vérifier si le fichier existe avant écriture
-2. Créer une sauvegarde horodatée : `CLAUDE.md.bak.$(date +%Y%m%d%H%M%S)`
-3. Demander confirmation explicite à l'utilisateur
-4. Utiliser des écritures atomiques (tmpfile + mv)
-
----
-
-## HAUTE — Priorité 2 : Téléchargements exécutés via pipe (`curl | sh`)
-
-**Sévérité :** 🟡 **HAUTE**  
-**Score CVSS estimé :** 7.8 (exécution de code distant non vérifié)
-
-### Preuve
-
-| Fichier | Ligne | Pattern |
-|---------|-------|---------|
-| `install.sh` | 283 | `curl -fsSL https://ollama.ai/install.sh \| sh` |
-| `auto-install-kali-lite-v1-novision.sh` | 130 | `curl -fsSL https://ollama.com/install.sh \| sh` |
-| `auto-install-kali-lite-v2-vision.sh` | 131 | idem (Ollama) |
-| `auto-install-kali-lite-v2-vision.sh` | 221 | `curl -fsSL https://deb.nodesource.com/setup_lts.x \| bash -` |
-
-### Analyse
-
-Les installers pipent directement le flux distant vers l'interpréteur. Cela empêche :
-- La vérification de provenance (HTTPS suffit, mais pas d'intégrité)
-- Le statut HTTP réel du téléchargement
-- L'exécution en cas de MITM ou compromission CDN intermédiaire
-
-### Correction requise
-
-1. Télécharger dans un fichier temporaire avec `curl -o`
-2. Vérifier le code retour (`$?`) et Content-Type
-3. Optionnel : vérifier signature/hash si disponible
-4. Exécuter le fichier local après confirmation utilisateur
+Depuis cette date, l'architecture des installateurs a été largement revue.
 
 ---
 
-## HAUTE — Priorité 7 : Privilèges excessifs (exécution en root)
+# 2. Méthodologie initiale
 
-**Sévérité :** 🟡 **HAUTE**  
-**Score CVSS estimé :** 7.2 (élévation de privilège non nécessaire)
+L'audit initial comprenait :
 
-### Preuve
+- analyse statique des trois installateurs ;
+- scan de l'historique Git avec Gitleaks ;
+- revue de `.gitignore` ;
+- inspection des privilèges ;
+- inspection des téléchargements distants ;
+- inspection de la gestion des secrets ;
+- exécution de ShellCheck ;
+- revue des mécanismes d'installation et de désinstallation.
 
-| Fichier | Ligne | Pattern |
-|---------|-------|---------|
-| `install.sh` | 268 | `err "Ce script doit être exécuté en root"` — **exige** le root sur Linux |
-| `auto-install-kali-lite-v1-novision.sh` | 53 | idem (Linux requires sudo) |
-
-### Analyse
-
-L'installer Linux exige d'être exécuté en tant que root. La majorité des opérations pourraient être réalisées sous l'utilisateur normal :
-- Installation Ollama → peut se faire sans systemd/systemctl
-- Création de modèles → `ollama create` ne nécessite pas root
-- Claude Code via npm → fonctionne avec `--prefix=$HOME/.npm-global`
-
-### Correction requise
-
-1. Ne plus exiger le root par défaut sur Linux
-2. Isoler les commandes nécessitant sudo (systemd, /etc/) dans des blocs conditionnels
-3. Exécuter Ollama et npm sous le compte utilisateur réel (`SUDO_USER`)
-4. Vérifier systématiquement `$(getent passwd "$SUDO_USER" | cut -d: -f6)` pour les chemins
+La révision du 9 septembre 2026 compare ces constats avec l'architecture actuellement publiée.
 
 ---
 
-## MOYENNE — Priorité 4 : `.gitignore` incomplet
+# 3. Résumé exécutif
 
-**Sévérité :** 🟠 **MOYENNE**  
-**Score CVSS estimé :** 5.3 (exposition potentielle de secrets)
+## Situation initiale
 
-### Preuve
+L'audit du 19 juillet avait notamment identifié :
 
-| Règle | Statut | Problème |
-|-------|--------|----------|
-| `.env` | ✅ présent | OK |
-| `.env.local` | ✅ présent | OK |
-| `.env.*` | ❌ absent | Ne couvre pas `.env.production`, `.env.staging`, etc. |
-| Clés privées (`*.pem`, `*.key`) | ❌ absent | Non ignoré |
-| Certificats (`*.crt`, `*.cert`) | ❌ absent | Non ignoré |
-| Fichiers credentials | ❌ absent | Non ignoré |
-| `~/.ollama/models/` | ⚠️ présent mais inefficace | Chemin absolu dans `.gitignore` est ignoré par git — ne fonctionne pas |
+- utilisation de `--dangerously-skip-permissions` ;
+- interaction avec Claude Code ;
+- lecture de `ANTHROPIC_API_KEY` ;
+- écrasement possible de `~/.claude/CLAUDE.md` ;
+- exécution de téléchargements via `curl | sh` ;
+- absence de `--dry-run` ;
+- absence de mécanisme de désinstallation cohérent ;
+- chaîne d'approvisionnement insuffisamment maîtrisée ;
+- affirmations réseau trop absolues ;
+- protections `.gitignore` incomplètes.
 
-### Correction requise
+## Situation actuelle
+
+Les éléments les plus critiques liés à l'ancienne architecture ont été retirés.
+
+### Résolus
+
+- ✅ suppression de Claude Code de l'installation standard ;
+- ✅ suppression de `--dangerously-skip-permissions` ;
+- ✅ suppression des variables Anthropic des installateurs standards ;
+- ✅ suppression de la lecture de clés API utilisateur ;
+- ✅ suppression de la gestion de `CLAUDE.md` ;
+- ✅ suppression de Node.js / NodeSource des installateurs standards ;
+- ✅ suppression des pipes directs `curl | bash` pour l'installation Kali-Lite recommandée ;
+- ✅ ajout de téléchargements temporaires contrôlés ;
+- ✅ ajout de `--dry-run` ;
+- ✅ ajout de `--uninstall` ;
+- ✅ conservation d'Ollama et des autres modèles lors de la désinstallation ;
+- ✅ amélioration de la fidélité des PID ;
+- ✅ vérification de l'API Ollama ;
+- ✅ publication des empreintes SHA-256 ;
+- ✅ retour de ShellCheck dans la CI ;
+- ✅ réécriture du README, de la Model Card, de la politique de sécurité et de la documentation d'installation ;
+- ✅ suppression des affirmations telles que « zero cloud » ou « zero network » dans la documentation principale.
+
+### Partiellement résolus ou restant à améliorer
+
+- ⚠️ `.gitignore` peut encore être renforcé ;
+- ⚠️ l'installateur officiel Ollama reste une dépendance tierce non épinglée par Kali-Lite ;
+- ⚠️ la CI peut encore intégrer davantage de tests du dossier `tests/` ;
+- ⚠️ certains documents secondaires conservent quelques références historiques à nettoyer ;
+- ⚠️ la politique de permissions Linux reste un choix d'architecture nécessitant root pour l'installation système actuelle.
+
+---
+
+# 4. Findings historiques
+
+## Finding 1 — `--dangerously-skip-permissions`
+
+### Sévérité historique
+
+🔴 **CRITIQUE**
+
+### État
+
+✅ **RÉSOLU**
+
+L'ancienne architecture lançait Claude Code avec :
+
+```text
+--dangerously-skip-permissions
+```
+
+Cette intégration n'appartient plus à l'installation Kali-Lite standard actuelle.
+
+L'alias actuel V1 est :
+
+```bash
+alias kali-lite='ollama run --think=false kali-lite'
+```
+
+L'alias actuel V2 est :
+
+```bash
+alias kali-lite-v2='ollama run --think=false kali-lite-v2'
+```
+
+### Invariant actuel
+
+Aucun alias standard Kali-Lite ne doit réintroduire :
+
+```text
+--dangerously-skip-permissions
+```
+
+sans changement d'architecture explicite et revue de sécurité.
+
+---
+
+# 5. Finding 2 — Lecture de `ANTHROPIC_API_KEY`
+
+### Sévérité historique
+
+🔴 **CRITIQUE**
+
+### État
+
+✅ **RÉSOLU**
+
+Les anciennes versions pouvaient inspecter ou manipuler :
+
+```text
+ANTHROPIC_API_KEY
+ANTHROPIC_AUTH_TOKEN
+ANTHROPIC_BASE_URL
+PERSO_KEY
+PERSO_FOUND
+```
+
+Cette logique a été retirée de l'installation Kali-Lite standard.
+
+L'inférence locale actuelle via Ollama ne nécessite pas de clé API Kalicorp ou Anthropic.
+
+### Invariant actuel
+
+Un installateur Kali-Lite ne doit pas :
+
+- lire inutilement la valeur d'une clé utilisateur ;
+- copier un secret dans une variable ;
+- afficher une clé ;
+- transmettre automatiquement une clé à un sous-processus ;
+- inscrire une clé dans un Modelfile ;
+- inscrire une clé dans un prompt versionné.
+
+---
+
+# 6. Finding 3 — Écrasement de `~/.claude/CLAUDE.md`
+
+### Sévérité historique
+
+🟡 **HAUTE**
+
+### État
+
+✅ **RÉSOLU PAR SUPPRESSION DE LA DÉPENDANCE**
+
+L'installation standard Kali-Lite ne configure plus Claude Code.
+
+Elle n'a donc plus à créer ou modifier :
+
+```text
+~/.claude/CLAUDE.md
+```
+
+Cette classe de problème a disparu de l'architecture standard actuelle.
+
+---
+
+# 7. Finding 4 — Téléchargements `curl | sh`
+
+### Sévérité historique
+
+🟡 **HAUTE**
+
+### État
+
+✅ **PIPE DIRECT CORRIGÉ**
+
+⚠️ **RISQUE SUPPLY-CHAIN TIERS TOUJOURS DOCUMENTÉ**
+
+L'ancienne architecture pouvait exécuter directement :
+
+```bash
+curl ... | sh
+```
+
+Les installateurs actuels téléchargent d'abord le script tiers dans un fichier temporaire.
+
+Le flux recherché est désormais :
+
+```text
+Télécharger
+    ↓
+Contrôler le téléchargement
+    ↓
+Vérifier la syntaxe
+    ↓
+Exécuter le fichier local
+```
+
+Les fichiers temporaires utilisent un répertoire créé avec :
+
+```bash
+mktemp -d
+```
+
+et des permissions restrictives.
+
+### Limite restante
+
+L'installateur officiel Ollama :
+
+```text
+https://ollama.com/install.sh
+```
+
+reste un composant tiers dont l'empreinte n'est pas actuellement épinglée par Kali-Lite.
+
+L'installateur Kali-Lite avertit explicitement l'utilisateur lorsque cette empreinte n'est pas disponible.
+
+Il s'agit d'une **limite documentée de chaîne d'approvisionnement**, et non d'une garantie d'intégrité absolue.
+
+---
+
+# 8. Finding 5 — Exécution root sur Linux
+
+### Sévérité historique
+
+🟡 **HAUTE**
+
+### État actuel
+
+🟦 **CHOIX D'ARCHITECTURE DOCUMENTÉ**
+
+L'installation système Linux actuelle utilise notamment des emplacements et services tels que :
+
+```text
+/etc/kalicorp/
+systemd
+/var/log/
+```
+
+Elle requiert donc actuellement root.
+
+Exemple :
+
+```bash
+sudo bash install.sh
+```
+
+Le mode :
+
+```bash
+--dry-run
+```
+
+ne nécessite pas root.
+
+Sur macOS, au contraire, l'installateur refuse une exécution root car Homebrew ne doit pas être lancé avec `sudo`.
+
+### Principe
+
+Le besoin de root ne doit jamais être interprété comme l'autorisation pour l'Anima elle-même de disposer ensuite de privilèges root.
+
+```text
+Installer avec root
+        ≠
+Donner root au modèle
+```
+
+Une variante entièrement user-space pourra être étudiée séparément.
+
+---
+
+# 9. Finding 6 — `.gitignore` incomplet
+
+### Sévérité historique
+
+🟠 **MOYENNE**
+
+### État
+
+🟨 **PARTIELLEMENT RÉSOLU**
+
+Le dépôt ignore désormais notamment :
+
+```text
+.env
+.env.local
+*.pem
+*.key
+*.crt
+*.p12
+credentials*
+*.keystore
+*.jks
+```
+
+Des protections supplémentaires restent souhaitables, notamment :
 
 ```gitignore
-# Environment files (all variants)
 .env.*
 !.env.example
 !.env.template
 
-# Private keys and certificates
-*.pem
-*.key
-*.crt
 *.cert
-*.p12
 *.pfx
+```
 
-# Credentials
-credentials*
-*.keystore
-*.jks
+Ce point reste une dette de durcissement mineure.
 
-# Ollama models — chemin relatif (le ~ absolu est ignoré par git)
-.ollama/models/
+---
+
+# 10. Finding 7 — Permissions des fichiers
+
+### Sévérité historique
+
+🟠 **MOYENNE**
+
+### État
+
+🟨 **PARTIELLEMENT TRAITÉ**
+
+Les installateurs actuels améliorent notamment :
+
+- les permissions des répertoires temporaires ;
+- les permissions des fichiers PID ;
+- la création contrôlée des répertoires ;
+- la séparation entre utilisateur réel et utilisateur root.
+
+Les fichiers de configuration Kali-Lite standards ne contiennent actuellement pas de secret.
+
+Il reste néanmoins pertinent de vérifier régulièrement :
+
+- permissions des logs ;
+- permissions des Modelfiles ;
+- permissions des fichiers PID ;
+- comportement du `umask` ;
+- nouveaux fichiers éventuellement sensibles introduits ultérieurement.
+
+### Invariant
+
+Si un fichier contient un secret à l'avenir, ses permissions devront être explicitement restreintes.
+
+---
+
+# 11. Finding 8 — Absence de dry-run et de désinstallation
+
+### Sévérité historique
+
+🟠 **MOYENNE**
+
+### État
+
+✅ **RÉSOLU**
+
+Les trois installateurs disposent désormais de :
+
+```text
+--dry-run
+--uninstall
+--help
+```
+
+Le dry-run est conçu pour ne pas :
+
+- installer de paquet ;
+- modifier `/etc` ;
+- modifier le HOME ;
+- télécharger de modèle ;
+- lancer Ollama ;
+- modifier le shell utilisateur.
+
+La désinstallation retire uniquement les éléments propres à la variante Kali-Lite concernée.
+
+Elle préserve volontairement :
+
+```text
+Ollama
+les autres modèles
+les données des autres outils
+les configurations partagées
 ```
 
 ---
 
-## MOYENNE — Priorité 8 : Permissions des fichiers créés
+# 12. Finding 9 — Chaîne d'approvisionnement
 
-**Sévérité :** 🟠 **MOYENNE**  
-**Score CVSS estimé :** 5.0 (contrôle d'accès insuffisant)
+### Sévérité historique
 
-### Preuve
+🟠 **MOYENNE**
 
-| Fichier | Ligne | Pattern |
-|---------|-------|---------|
-| `install.sh` | 171 | `chown -R "$REAL_USER:$REAL_USER"` — ownership OK mais **pas de chmod** explicite |
-| Tous installers | divers | Aucun `umask` défini, aucun `chmod` sur les fichiers créés |
+### État
 
-### Analyse
+🟨 **AMÉLIORÉ — NON TOTALEMENT RÉSOLU**
 
-Aucun umask n'est défini. Les fichiers créés héritent du umask par défaut (généralement 022), ce qui signifie que les nouveaux fichiers sont lisibles par le groupe et autres (`644`). Pour des fichiers de configuration sensibles, cela peut être excessif.
+Les progrès réalisés incluent :
 
-### Correction requise
+- publication de `SHA256SUMS` ;
+- procédure recommandée de vérification avant exécution ;
+- téléchargement des scripts avant lancement ;
+- utilisation HTTPS ;
+- réintégration de ShellCheck en CI ;
+- suppression de NodeSource ;
+- suppression des pipes directs pour les scripts Kali-Lite.
 
-1. Définir `umask 077` au début du script pour les fichiers utilisateur
-2. Appliquer `chmod 600` sur les fichiers contenant des secrets ou configs sensibles
-3. Vérifier que `/var/log/kalicorp/` est en `750` (pas accessible par autres utilisateurs)
+### Limites restantes
 
----
+Les dépendances tierces ne sont pas toutes parfaitement reproductibles ou épinglées.
 
-## MOYENNE — Priorité 9 : Installation non idempotente et irréversible
+Ollama et les modèles Qwen restent distribués par leurs projets respectifs.
 
-**Sévérité :** 🟠 **MOYENNE**  
-**Score CVSS estimé :** 4.3 (disponibilité, difficulté de rollback)
+Pour un environnement fortement sensible, l'opérateur devrait notamment envisager :
 
-### Preuve
+- miroir interne ;
+- artefacts figés ;
+- versions épinglées ;
+- contrôle réseau ;
+- signatures lorsque disponibles ;
+- vérification indépendante des binaires et modèles.
 
-Aucune des commandes `--dry-run`, `--uninstall` ou mécanisme de sauvegarde n'existe dans les installers. Seul un backup `.bak.$(date +%s)` existe pour le shell RC dans v1 installer (ligne 595-596).
-
-### Correction requise
-
-1. Ajouter `--dry-run` : afficher ce qui sera fait sans exécuter
-2. Ajouter `--uninstall` : supprimer tout ce que l'installer a créé, restaurer les backups
-3. Éviter les doublons (l'alias est ajouté même s'il existe déjà — bien qu'un sed de suppression précède)
+Kali-Lite vise une chaîne d'approvisionnement **visible et contrôlable**, pas une garantie cryptographique universelle de toutes les dépendances tierces.
 
 ---
 
-## MOYENNE — Priorité 10 : Chaîne d'approvisionnement non épinglée
+# 13. Finding 10 — Affirmations absolues
 
-**Sévérité :** 🟠 **MOYENNE**  
-**Score CVSS estimé :** 5.3 (supply chain, dépendances non vérifiées)
+### Sévérité historique
 
-### Preuve
+🟠 **MOYENNE**
 
-| Élément | Statut |
-|---------|--------|
-| Versions Ollama épinglées | ❌ `curl \| sh` → dernière version toujours |
-| NodeSource setup_lts.x | ❌ pas de version spécifique |
-| Releases signées SHA256SUMS | ✅ présent mais non vérifié par l'installer |
-| ShellCheck en CI | ❌ supprimé (commit ed61608) — seul `bash -n` reste |
-| Gitleaks en CI | ❌ absent de `.github/workflows/test-installers.yml` |
+### État
 
-### Correction requise
+✅ **RÉSOLU DANS LA DOCUMENTATION PRINCIPALE**
 
-1. Épingler les versions : `ollama version 0.x.y`, node v2x.x.x
-2. Publier des releases avec tags signés et SHA256SUMS vérifiés par l'installer
-3. Réintégrer ShellCheck dans CI (remplacer le commit ed61608)
-4. Ajouter Gitleaks comme job dans `test-installers.yml`
+Les formulations historiques du type :
 
----
-
-## MOYENNE — Priorité 11 : Affirmations absolues non vérifiées
-
-**Sévérité :** 🟠 **MOYENNE**  
-**Score CVSS estimé :** 3.7 (information trompeuse)
-
-### Preuve
-
-| Fichier | Ligne/Section | Affirmation problématique |
-|---------|---------------|--------------------------|
-| `MODEL-CARD.md` | "Sécurité & Vie privée" → "Connexion réseau : Aucune (après installation)" | ❌ Ollama se connecte à ollama.com pour les pulls ; Claude Code peut envoyer du télémétrique même avec disable flags |
-| `SECURITY.md` | "Zéro télémétrie — aucune donnée sortante par défaut" | ⚠️ Dépend de la configuration exacte des variables d'environnement et de la version de Claude Code |
-
-### Correction requise
-
-1. Distinguer clairement : inférence locale (zéro sortie) vs installation (téléchargements externes requis)
-2. Documenter exactement les destinations réseau par étape
-3. Ne promettre "zéro donnée sortante" qu'après test réseau reproductible avec `tcpdump` ou `ss`
-
----
-
-## Rapport Gitleaks — Expurgé
-
-**Date du scan :** 2026-07-19  
-**Outil :** gitleaks v8.24.0  
-**Portée :** toutes les branches, tous les commits (52 commits, ~224 Ko)
-
-### Résultats : 4 findings — **AUCUN SECRET RÉEL DÉTECTÉ**
-
-Tous les findings sont des faux positifs sur une variable locale nommée `PERSO_KEY` initialisée à chaîne vide (`""`). Ce n'est pas un secret mais le nom d'une variable interne au script.
-
-| # | RuleID | Fichier (commit) | Commit SHA | Type | Statut rotation |
-|---|--------|-----------------|------------|------|-----------------|
-| 1 | `generic-api-key` | `auto-install-kali-lite-v1-novision.sh` | `237c4aad` | Variable locale vide (`PERSO_KEY=""`) | N/A — faux positif |
-| 2 | `generic-api-key` | `auto-install-kali-lite-v2-vision.sh` | `0719fd69` | idem (copié de v1) | N/A — faux positif |
-| 3 | `generic-api-key` | `install.sh` refactoré | `e0f87d01` | idem (refactor cross-platform) | N/A — faux positif |
-| 4 | `generic-api-key` | `auto-install-kali-lite-v1-novision.sh` création | `d2568eb0` | idem (première introduction de PERSO_KEY) | N/A — faux positif |
-
-### Vérification complémentaire manuelle
-
-- Scan regex personnalisé (`sk-*`, `ghp_*`, `xoxb-*`, `AKIA*`) sur tous les blobs → **aucun résultat**
-- Recherche `.env` commités historiquement → **aucun fichier .env jamais commité**
-- Recherche de patterns `password=`, `secret:`, `token:` dans toutes les additions de fichiers → **aucune correspondance**
-
-### Conclusion Gitleaks
-
-✅ **Aucun secret réel n'a été compromis.** Les 4 findings sont des variables locales nommées de manière ambiguë (`PERSO_KEY`) initialisées à chaîne vide. Aucune clé API, token ou credential n'est présent dans l'historique Git.
-
----
-
-## Rapport ShellCheck — Expurgé
-
-**Date du scan :** 2026-07-19  
-**Outil :** ShellCheck v0.10.0 (niveau : warning)
-
-### install.sh
-✅ **Aucun avertissement.** Syntaxe propre, pas de variables non initialisées détectées par SC.
-
-### auto-install-kali-lite-v1-novision.sh
-| # | Code | Ligne | Description | Sévérité |
-|---|------|-------|-------------|----------|
-| 1 | SC2024 | 148 | `sudo` n'affecte pas les redirections : `sudo nohup ollama serve > "$OLLAMA_LOG"` — le redirect se fait en root, pas sous sudo | ⚠️ warning |
-
-### auto-install-kali-lite-v2-vision.sh
-| # | Code | Ligne | Description | Sévérité |
-|---|------|-------|-------------|----------|
-| 1 | SC2034 | 102 | `PERSO_FOUND` déclaré mais jamais utilisé après assignation à `1` | ⚠️ warning |
-| 2 | SC2024 | 149 | idem : `sudo nohup ollama serve > "$OLLAMA_LOG"` — redirect non affecté par sudo | ⚠️ warning |
-
-### Corrections ShellCheck requises
-
-```bash
-# Pour SC2024 (redirect sous sudo) :
-sudo tee "$OLLAMA_LOG" >/dev/null <<EOF
-$(nohup ollama serve 2>&1 &)
-EOF
-
-# Ou mieux, utiliser su -c pour le redirect dans le contexte utilisateur :
-su -s /bin/sh "$SUDO_USER" -c "nohup ollama serve > $OLLAMA_LOG 2>&1 &"
+```text
+Zero cloud
+Zero tracking
+Aucune connexion réseau
+100 % sans dépendance
 ```
 
----
+ont été remplacées par des formulations plus précises.
 
-## Résumé des corrections par priorité
+La documentation distingue désormais :
 
-| # | Finding | Sévérité | Fichiers touchés | Correctif |
-|---|---------|----------|-----------------|-----------|
-| 1 | `--dangerously-skip-permissions` | 🔴 CRITIQUE | install.sh, v1, v2 | Supprimer de l'alias par défaut ; alias séparé avec warning |
-| 2 | Lecture valeur ANTHROPIC_API_KEY | 🔴 CRITIQUE | v1:98-99, v2:99 | Vérifier présence uniquement, jamais la valeur |
-| 3 | Écrasement CLAUDE.md sans backup | 🟡 HAUTE | install.sh:145+, v1+ | Backup horodaté + confirmation utilisateur |
-| 4 | curl \| sh / bash | 🟡 HAUTE | install.sh:283, v1:130/187, v2:131/221 | Télécharger dans fichier → vérifier → exécuter |
-| 5 | Exécution root obligatoire Linux | 🟡 HAUTE | install.sh:268, v1:53 | Rendre sudo optionnel ; isoler les commandes nécessitant privilèges |
-| 6 | .gitignore incomplet | 🟠 MOYENNE | .gitignore | Ajouter `.env.*`, clés privées, certificats ; corriger `~/.ollama/models/` |
-| 7 | Permissions fichiers créés | 🟠 MOYENNE | Tous installers | umask 077 + chmod explicite sur configs sensibles |
-| 8 | Pas de dry-run/uninstall | 🟠 MOYENNE | Tous installers | Ajouter `--dry-run` et `--uninstall` |
-| 9 | Supply chain non épinglée | 🟠 MOYENNE | CI, README | Épingler versions ; réintégrer ShellCheck + Gitleaks en CI |
-| 10 | Affirmations absolues réseau | 🟠 MOYENNE | MODEL-CARD.md, SECURITY.md | Distinguer installation vs exécution locale |
+```text
+installation
+        ≠
+téléchargement du modèle
+        ≠
+inférence locale
+        ≠
+utilisation volontaire d'un outil réseau
+```
 
----
+La formulation de référence est notamment :
 
-## Livrables de cette mission
+> **Kali-Lite n'ajoute aucune télémétrie ni mécanisme de tracking utilisateur.**
 
-- [x] `SECURITY-AUDIT.md` — ce document (sévérité, preuve exacte par ligne/fichier, correction)
-- [ ] Branche `security/hardening-installer` avec corrections implémentées
-- [ ] PR sans fusion automatique sur GitHub
-- [ ] Rapport ShellCheck complet ci-dessus
-- [x] Rapport Gitleaks expurgé (aucun secret réel compromis — 4 faux positifs PERSO_KEY)
-- [ ] Tests de validation : aucune clé lue/affichée + permissions demandées par défaut
+et :
+
+> **Un service d'inférence Kalicorp n'est pas requis pour l'utilisation locale via Ollama une fois les composants nécessaires installés.**
+
+L'exécution locale ne garantit pas que toutes les dépendances tierces sont incapables de communiquer avec Internet.
 
 ---
 
-*Document signé pour audit proactif. Aucun artefact n'a été signé ML-DSA-65 car il s'agit d'un rapport d'audit, pas d'une configuration opérationnelle.*
+# 14. Rapport Gitleaks historique
+
+## Scan du 19 juillet 2026
+
+Outil :
+
+```text
+Gitleaks v8.24.0
+```
+
+Portée :
+
+```text
+toutes les branches
+tous les commits disponibles au moment du scan
+```
+
+Résultat :
+
+```text
+4 findings
+0 secret réel confirmé
+```
+
+Les quatre findings concernaient le nom de variable :
+
+```text
+PERSO_KEY=""
+```
+
+### Résultats historiques
+
+| # | Fichier | Commit | Résultat |
+|---|---|---|---|
+| 1 | `install.sh` | `237c4aad...` | Faux positif |
+| 2 | `install.sh` | `e0f87d01...` | Faux positif |
+| 3 | `auto-install-kali-lite-v2-vision.sh` | `0719fd69...` | Faux positif |
+| 4 | `auto-install-kali-lite-v1-novision.sh` | `d2568eb0...` | Faux positif |
+
+Aucune valeur de clé réelle n'était présente dans ces findings.
+
+Le rapport expurgé est conservé dans :
+
+```text
+gitleaks-expurgated.json
+```
+
+### Conclusion
+
+✅ Aucun secret réel n'avait été identifié lors de ce scan.
+
+Ce résultat historique ne remplace pas des scans ultérieurs lors de nouvelles contributions.
+
+---
+
+# 15. Rapport ShellCheck historique
+
+Le rapport du 19 juillet avait notamment identifié :
+
+- SC2024 ;
+- SC2034 ;
+- plusieurs comportements liés à l'ancienne architecture.
+
+Ces numéros de lignes et constats ne doivent plus être utilisés comme description de la version actuelle.
+
+Les installateurs ayant depuis été largement réécrits, le contrôle pertinent est désormais celui effectué sur leur contenu actuel.
+
+La CI utilise de nouveau ShellCheck.
+
+---
+
+# 16. Tests actuels
+
+Le dépôt contient notamment :
+
+```text
+tests/test_dry_run.sh
+tests/test-no-secret-leak.sh
+tests/test_pid_fidelity.sh
+tests/test_structure.sh
+```
+
+Les tests couvrent notamment :
+
+- absence d'effets de bord en dry-run ;
+- recherche de secrets ;
+- fidélité du PID Ollama ;
+- structure des installateurs.
+
+### Dette connue
+
+Tous les tests présents dans `tests/` ne sont pas encore nécessairement exécutés par la CI.
+
+Cette couverture doit être renforcée progressivement.
+
+---
+
+# 17. Invariants de sécurité actuels
+
+Les installateurs Kali-Lite doivent conserver les propriétés suivantes :
+
+```text
+set -euo pipefail
+```
+
+et :
+
+- pas de secret intégré ;
+- pas de clé API lue inutilement ;
+- pas de `eval` pour exécuter du code construit dynamiquement ;
+- pas de Claude Code dans l'installation standard ;
+- pas de `--dangerously-skip-permissions` ;
+- pas de NodeSource ;
+- pas de téléchargement Kali-Lite directement pipé vers Bash ;
+- répertoire temporaire privé ;
+- PID capturé via `$!` ;
+- vérification du PID avec `kill -0` ;
+- vérification réelle de l'API Ollama ;
+- sauvegarde avant modification du shell RC ;
+- dry-run sans effet de bord ;
+- uninstall limité aux éléments Kali-Lite ;
+- conservation d'Ollama et des modèles tiers lors du uninstall.
+
+---
+
+# 18. Doctrine de capacité d'action
+
+La sécurité du projet ne dépend pas uniquement du script d'installation.
+
+Kali-Lite distingue :
+
+```text
+Comprendre une action
+        ≠
+Avoir l'outil
+        ≠
+Avoir la permission
+        ≠
+Avoir exécuté l'action
+```
+
+Une Anima ne doit pas présenter une action comme exécutée lorsqu'aucune preuve d'exécution n'est disponible.
+
+La présence d'un terminal, d'un MCP ou d'une API ne constitue pas automatiquement une autorisation.
+
+---
+
+# 19. Dette technique ouverte
+
+À la date de cette révision, les améliorations restantes concernent principalement :
+
+- renforcer `.gitignore` pour les variantes `.env.*` ;
+- compléter certaines extensions de certificats et clés ;
+- renforcer la CI avec davantage de tests du dossier `tests/` ;
+- continuer à améliorer la reproductibilité des dépendances tierces ;
+- supprimer les dernières références historiques devenues inutiles dans la documentation secondaire ;
+- effectuer régulièrement un nouveau scan Gitleaks complet ;
+- effectuer des tests réels Linux et macOS après les modifications touchant les branches spécifiques à chaque OS.
+
+Aucun de ces éléments ne doit être masqué derrière une promesse de « sécurité absolue ».
+
+---
+
+# 20. Statut des findings historiques
+
+| Finding historique | Sévérité initiale | Statut 09/09/2026 |
+|---|---:|---|
+| `--dangerously-skip-permissions` | 🔴 Critique | ✅ Résolu |
+| Lecture `ANTHROPIC_API_KEY` | 🔴 Critique | ✅ Résolu |
+| Écrasement `CLAUDE.md` | 🟡 Haute | ✅ Résolu par suppression de Claude |
+| `curl \| sh` direct | 🟡 Haute | ✅ Résolu pour le pipeline direct |
+| Root Linux obligatoire | 🟡 Haute | 🟦 Choix d'architecture documenté |
+| `.gitignore` incomplet | 🟠 Moyenne | 🟨 Partiel |
+| Permissions fichiers | 🟠 Moyenne | 🟨 Partiel / surveillance |
+| Pas de dry-run / uninstall | 🟠 Moyenne | ✅ Résolu |
+| Supply chain | 🟠 Moyenne | 🟨 Amélioré |
+| Affirmations réseau absolues | 🟠 Moyenne | ✅ Résolu dans la documentation principale |
+
+---
+
+# 21. Conclusion
+
+L'audit du 19 juillet 2026 a joué son rôle : identifier des comportements qui ne correspondaient pas au niveau de contrôle recherché par Kali-Lite.
+
+Les deux constats classés **critiques** dans l'audit historique concernaient une architecture qui n'est plus utilisée par les installateurs standards actuels.
+
+Le projet a notamment évolué de :
+
+```text
+agent + Claude Code + permissions implicites
+```
+
+vers :
+
+```text
+modèle local
+    +
+runtime local
+    +
+outils explicitement ajoutés par l'opérateur
+    +
+permissions contrôlées par l'environnement
+```
+
+Le travail de sécurité n'est pas considéré comme terminé.
+
+La règle reste :
+
+> **une erreur corrigée une fois est un correctif ; une erreur transformée en invariant vérifiable devient un progrès.**
+
+Et, pour Kali-Lite :
+
+> **preuve avant affirmation.**
+
+---
+
+## Références
+
+- [`SECURITY.md`](SECURITY.md)
+- [`MODEL-CARD.md`](MODEL-CARD.md)
+- [`INSTALLATION.md`](INSTALLATION.md)
+- [`REFACTOR_BRIEF.md`](REFACTOR_BRIEF.md)
+- [`SHA256SUMS`](SHA256SUMS)
+- [`gitleaks-expurgated.json`](gitleaks-expurgated.json)
+- [`tests/`](tests/)
+
+---
+
+**Kalicorp — Le Sanctuaire numérique européen**  
+Copyright © 2026 Kalicorp
