@@ -2,35 +2,50 @@
 
 ## Notre engagement
 
-Dans l'intérêt de favoriser un environnement ouvert et accueillant, nous nous engageons à faire de la participation à notre projet une expérience sans harcèlement pour tout le monde, quel que soit leur âge, leur corpulence, leur handicap, leur ethnie, leur niveau de social, leur sexe, leur identité et expression, leur niveau de expérience, leur nationalité, leur apparence personnelle, leur race, leur religion ou leur identité et orientation.
+Kali-Lite est un projet open source porté par Kalicorp.
 
-## Nos standards
+Nous souhaitons maintenir un environnement de contribution ouvert, professionnel et accueillant, dans lequel chacun peut participer sans harcèlement ni discrimination.
 
-Comportements bénéfiques pour :
-- L'utilisation et le partage de logiciels de cybersouveraineté
-- L'entraide technique et le mentorat
-- Le respect des différences de perspective et de contexte
-- L'accueil gracieux des critiques constructives
+Les échanges doivent rester centrés sur :
 
-Comportements inacceptables :
-- Le langage ou les images sexualisés et l'attention sexuelle sous quelque forme que ce soit
-- Le trollage, les commentaires insultants ou désobligeants, et les attaques personnelles ou politiques
-- Le harcèlement public ou privé
-- La publication d'informations privées d'autrui sans autorisation explicite
-- Toute activité visant à faciliter des actions offensives non autorisées
+- les faits ;
+- le code ;
+- les tests ;
+- les usages ;
+- les risques ;
+- les compromis techniques.
 
-## Responsabilités
+Les désaccords sont normaux dans un projet technique.
 
-Les mainteneurs ont la responsabilité de clarifier les standards de comportement acceptables et sont censés prendre des mesures correctives appropriées et équitables en réponse tout comportement inacceptable.
-
-## Portée
-
-Ce Code of Conduct s'applique dans tous les espaces du projet, et également lorsque l'individu représente le projet ou sa communauté en public.
-
-## Application
-
-Les incidents de comportement inacceptable peuvent être signalés contactant kalicorp@proton.me.
+Ils ne justifient ni les attaques personnelles, ni le harcèlement, ni l'intimidation.
 
 ---
 
-**Kalicorp — Le Sanctuaire numérique européen**
+## Nos standards
+
+### Comportements encouragés
+
+Nous encourageons notamment :
+
+- l'entraide technique ;
+- le partage de connaissances ;
+- le mentorat ;
+- les critiques constructives ;
+- la vérification par les faits et les tests ;
+- la reconnaissance de ses erreurs ;
+- la documentation des limites d'une solution ;
+- le respect des différents niveaux d'expérience ;
+- le respect des différences de perspective et de contexte ;
+- la recherche de solutions simples et reproductibles ;
+- la contribution à une IA locale, inspectable et maîtrisable par son opérateur.
+
+Une critique technique peut être directe.
+
+Elle doit cependant porter sur :
+
+```text
+le code
+le comportement
+l'architecture
+la documentation
+les résultats
