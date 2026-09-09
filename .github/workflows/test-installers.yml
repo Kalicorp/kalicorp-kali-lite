@@ -5,174 +5,327 @@ on:
     paths:
       - 'install.sh'
       - 'auto-install-*.sh'
-      - '.github/workflows/*.yml'
+      - 'Modelfile'
+      - 'SHA256SUMS'
+      - 'README.md'
+      - 'INSTALLATION.md'
+      - 'MODEL-CARD.md'
+      - 'SECURITY.md'
+      - 'SECURITY-AUDIT.md'
+      - 'REFACTOR_BRIEF.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
+      - '.github/workflows/test-installers.yml'
+      - 'tests/**'
+      - 'docs/**'
+      - 'templates/**'
+      - 'assets/kali-lite-banner.png'
+      - 'assets/kali-lite-overview.webp'
+
   pull_request:
     paths:
       - 'install.sh'
       - 'auto-install-*.sh'
-      - '.github/workflows/*.yml'
+      - 'Modelfile'
+      - 'SHA256SUMS'
+      - 'README.md'
+      - 'INSTALLATION.md'
+      - 'MODEL-CARD.md'
+      - 'SECURITY.md'
+      - 'SECURITY-AUDIT.md'
+      - 'REFACTOR_BRIEF.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
+      - '.github/workflows/test-installers.yml'
+      - 'tests/**'
+      - 'docs/**'
+      - 'templates/**'
+      - 'assets/kali-lite-banner.png'
+      - 'assets/kali-lite-overview.webp'
+
+  workflow_dispatch:
+
   schedule:
     - cron: '0 9 * * 1'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: kali-lite-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint-scripts:
-    name: Lint shell scripts
+
+  lint-shell:
+    name: Bash syntax & ShellCheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check install.sh syntax
-        run: bash -n install.sh
-
-      - name: Check v1 installer syntax
-        run: bash -n auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v2 installer syntax
-        run: bash -n auto-install-kali-lite-v2-vision.sh
-
-      - name: ShellCheck installers
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          scandir: '.'
-          severity: error
-
-  test-v1-syntax:
-    name: Kali-Lite v1 — syntax & structure
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check v1 shebang
-        run: head -1 auto-install-kali-lite-v1-novision.sh | grep -q '^#!/usr/bin/env bash'
-
-      - name: Check v1 has OS detection
-        run: grep -q 'detect_os\|uname -s\|IS_LINUX\|IS_MACOS' auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v1 has Ollama install
-        run: grep -q 'ollama' auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v1 has qwen3:8b
-        run: grep -q 'qwen3:8b' auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v1 has Modelfile
-        run: grep -q 'Modelfile\|MODELFILE' auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v1 no anthropic env
-        run: grep -q 'kali-lite' auto-install-kali-lite-v1-novision.sh
-
-      - name: Check v1 has GPL license header
-        run: grep -q 'GPL' auto-install-kali-lite-v1-novision.sh
-
-  test-v2-syntax:
-    name: Kali-Lite v2 — syntax & structure
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check v2 shebang
-        run: head -1 auto-install-kali-lite-v2-vision.sh | grep -q '^#!/usr/bin/env bash'
-
-      - name: Check v2 has OS detection
-        run: grep -q 'detect_os\|uname -s\|IS_LINUX\|IS_MACOS' auto-install-kali-lite-v2-vision.sh
-
-      - name: Check v2 has Ollama install
-        run: grep -q 'ollama' auto-install-kali-lite-v2-vision.sh
-
-      - name: Check v2 has qwen3.5:9b
-        run: grep -q 'qwen3.5:9b' auto-install-kali-lite-v2-vision.sh
-
-      - name: Check v2 has Modelfile
-        run: grep -q 'Modelfile\|MODELFILE' auto-install-kali-lite-v2-vision.sh
-
-      - name: Check v2 has alias injection
-        run: grep -q 'kali-lite' auto-install-kali-lite-v2-vision.sh
-
-      - name: Check v2 has GPL license header
-        run: grep -q 'GPL' auto-install-kali-lite-v2-vision.sh
-
-  test-install-sh:
-    name: install.sh — syntax & structure
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check install.sh shebang
-        run: head -1 install.sh | grep -q '^#!/usr/bin/env bash'
-
-      - name: Check install.sh has OS detection
-        run: grep -q 'detect_os\|uname -s' install.sh
-
-      - name: Check install.sh has Linux install
-        run: grep -q 'install_linux\|Linux' install.sh
-
-      - name: Check install.sh has macOS install
-        run: grep -q 'install_macos\|macOS\|Darwin' install.sh
-
-      - name: Check install.sh has shared functions
-        run: grep -q 'setup_modelfile\|setup_alias' install.sh
-
-      - name: Check install.sh has GPL license header
-        run: grep -q 'GPL' install.sh
-
-  validate-readme:
-    name: Validate README
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check README has install commands
-        run: grep -q 'curl.*install' README.md
-
-      - name: Check README has badges
-        run: grep -q 'img.shields.io' README.md
-
-      - name: Check README references both versions
-        run: grep -q 'v2\|vision' README.md
-
-      - name: Check README references banner
-        run: grep -q 'banner' README.md
-
-  validate-structure:
-    name: Validate repo structure
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check required files exist
+      - name: Validate Bash syntax
+        shell: bash
         run: |
-          for f in README.md MODEL-CARD.md CODE_OF_CONDUCT.md LICENSE .gitignore; do
-            if [ ! -f "$f" ]; then
-              echo "FAIL: $f is missing"
-              exit 1
-            fi
+          set -euo pipefail
+
+          scripts=(
+            install.sh
+            auto-install-kali-lite-v1-novision.sh
+            auto-install-kali-lite-v2-vision.sh
+            tests/test_structure.sh
+            tests/test_pid_fidelity.sh
+            tests/test_dry_run.sh
+            tests/test-no-secret-leak.sh
+          )
+
+          for script in "${scripts[@]}"; do
+            echo "Checking syntax: $script"
+            bash -n "$script"
           done
 
-      - name: Check .github structure
+      - name: Install ShellCheck
+        shell: bash
         run: |
-          if [ ! -d .github/ISSUE_TEMPLATE ]; then
-            echo "FAIL: .github/ISSUE_TEMPLATE is missing"
-            exit 1
-          fi
-          if [ ! -f .github/CONTRIBUTING.md ]; then
-            echo "FAIL: .github/CONTRIBUTING.md is missing"
-            exit 1
-          fi
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck --version
 
-      - name: Check banner exists
+      - name: Run ShellCheck
+        shell: bash
         run: |
-          if [ ! -f assets/kali-lite-banner.png ]; then
-            echo "FAIL: assets/kali-lite-banner.png is missing"
-            exit 1
-          fi
+          set -euo pipefail
+
+          shellcheck \
+            --severity=error \
+            install.sh \
+            auto-install-kali-lite-v1-novision.sh \
+            auto-install-kali-lite-v2-vision.sh \
+            tests/test_structure.sh \
+            tests/test_pid_fidelity.sh \
+            tests/test_dry_run.sh \
+            tests/test-no-secret-leak.sh
+
+
+  repository-invariants:
+    name: Repository structure & invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate repository structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/test_structure.sh
+
+      - name: Validate Ollama PID fidelity
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/test_pid_fidelity.sh
+
+
+  checksum-verification:
+    name: Verify published SHA-256
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Published checksums:"
+          cat SHA256SUMS
+          echo ""
+
+          sha256sum --check SHA256SUMS
+
 
   dry-run-isolation:
     name: Dry-run has no side effects
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    timeout-minutes: 10
 
-      - name: Run isolated dry-run tests
-        run: bash tests/test_dry_run.sh
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Execute isolated dry-run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/test_dry_run.sh
+
+
+  secret-regression:
+    name: Secret regression checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Run secret regression tests
-        run: bash tests/test-no-secret-leak.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/test-no-secret-leak.sh
+
+
+  installer-interface:
+    name: Installer interface smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate help interface
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          scripts=(
+            install.sh
+            auto-install-kali-lite-v1-novision.sh
+            auto-install-kali-lite-v2-vision.sh
+          )
+
+          for script in "${scripts[@]}"; do
+            echo "=== $script --help ==="
+            bash "$script" --help
+          done
+
+      - name: Validate required options exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          scripts=(
+            install.sh
+            auto-install-kali-lite-v1-novision.sh
+            auto-install-kali-lite-v2-vision.sh
+          )
+
+          for script in "${scripts[@]}"; do
+            grep -q -- '--dry-run' "$script"
+            grep -q -- '--uninstall' "$script"
+            grep -q -- '--help' "$script"
+          done
+
+
+  active-code-security:
+    name: Active installer security guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check forbidden legacy patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          scripts=(
+            install.sh
+            auto-install-kali-lite-v1-novision.sh
+            auto-install-kali-lite-v2-vision.sh
+          )
+
+          for script in "${scripts[@]}"; do
+            echo "Checking active installer: $script"
+
+            if grep -q 'dangerously-skip-permissions' "$script"; then
+              echo "FAIL: dangerously-skip-permissions found in $script"
+              exit 1
+            fi
+
+            if grep -q 'ANTHROPIC_' "$script"; then
+              echo "FAIL: Anthropic environment variable found in $script"
+              exit 1
+            fi
+
+            if grep -qi 'claude-code' "$script"; then
+              echo "FAIL: Claude Code dependency found in $script"
+              exit 1
+            fi
+
+            if grep -qi 'nodesource' "$script"; then
+              echo "FAIL: NodeSource dependency found in $script"
+              exit 1
+            fi
+
+            if grep -Eq 'curl.*\|[[:space:]]*(bash|sh)|wget.*\|[[:space:]]*(bash|sh)' "$script"; then
+              echo "FAIL: remote script piped directly to shell in $script"
+              exit 1
+            fi
+          done
+
+          echo "PASS: no forbidden legacy pattern found in active installers"
+
+
+  final-status:
+    name: Kali-Lite CI verdict
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint-shell
+      - repository-invariants
+      - checksum-verification
+      - dry-run-isolation
+      - secret-regression
+      - installer-interface
+      - active-code-security
+
+    steps:
+      - name: Evaluate CI result
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          failures=0
+
+          check_result() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" == "success" ]]; then
+              echo "PASS: $name"
+            else
+              echo "FAIL: $name -> $result"
+              failures=$((failures + 1))
+            fi
+          }
+
+          check_result "lint-shell" "${{ needs.lint-shell.result }}"
+          check_result "repository-invariants" "${{ needs.repository-invariants.result }}"
+          check_result "checksum-verification" "${{ needs.checksum-verification.result }}"
+          check_result "dry-run-isolation" "${{ needs.dry-run-isolation.result }}"
+          check_result "secret-regression" "${{ needs.secret-regression.result }}"
+          check_result "installer-interface" "${{ needs.installer-interface.result }}"
+          check_result "active-code-security" "${{ needs.active-code-security.result }}"
+
+          echo ""
+
+          if [[ "$failures" -gt 0 ]]; then
+            echo "KALI-LITE CI: FAIL"
+            exit 1
+          fi
+
+          echo "KALI-LITE CI: PASS"
