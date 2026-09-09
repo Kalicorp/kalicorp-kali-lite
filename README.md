@@ -161,6 +161,6 @@ sudo bash auto-install-kali-lite-v2-vision.sh   # Linux
 <div align="center">
 
 **Kalicorp — Le Sanctuaire numérique européen**
-2026 • [app.kalicorp.fr](https://app.kalicorp.fr)
+2026 • [site.kalicorp.fr](https://site.kalicorp.fr)
 
 </div>
