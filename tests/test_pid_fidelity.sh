@@ -1,19 +1,29 @@
 #!/usr/bin/env bash
-# Tests statiques des invariants PID pour start_ollama_manual
-# - Vérification des motifs dans le code source (grep)
-# - Les tests comportementaux (exécution avec faux ollama) sont reportés au prochain cycle
-#   — voir ticket : validation runtime à effectuer sur RyzenM demain
-# GPL-2.0 — Kalicorp | Le Sanctuaire | 2026
+# SPDX-License-Identifier: GPL-2.0-only
+# Kali-Lite — tests statiques des invariants PID Ollama
+# Kalicorp | Le Sanctuaire | 2026
+
 set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+SCRIPTS=(
+  "install.sh"
+  "auto-install-kali-lite-v1-novision.sh"
+  "auto-install-kali-lite-v2-vision.sh"
+)
 
 PASS=0
 FAIL=0
 TOTAL=0
 
 check() {
-  TOTAL=$((TOTAL + 1))
   local desc="$1"
   shift
+
+  TOTAL=$((TOTAL + 1))
+
   if "$@" >/dev/null 2>&1; then
     PASS=$((PASS + 1))
     echo "  PASS: $desc"
@@ -23,91 +33,253 @@ check() {
   fi
 }
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tests statiques : la fonction start_ollama_manual existe dans les trois scripts
-# ═══════════════════════════════════════════════════════════════════════════════
+check_absent() {
+  local desc="$1"
+  local pattern="$2"
+  local file="$3"
 
+  TOTAL=$((TOTAL + 1))
+
+  if ! grep -Eq -- "$pattern" "$file"; then
+    PASS=$((PASS + 1))
+    echo "  PASS: $desc"
+  else
+    FAIL=$((FAIL + 1))
+    echo "  FAIL: $desc"
+  fi
+}
+
+check_count() {
+  local desc="$1"
+  local expected="$2"
+  local pattern="$3"
+  local file="$4"
+  local count
+
+  TOTAL=$((TOTAL + 1))
+
+  count="$(grep -Ec -- "$pattern" "$file" || true)"
+
+  if [[ "$count" -eq "$expected" ]]; then
+    PASS=$((PASS + 1))
+    echo "  PASS: $desc"
+  else
+    FAIL=$((FAIL + 1))
+    echo "  FAIL: $desc (attendu=$expected obtenu=$count)"
+  fi
+}
+
+check_pid_order() {
+  local file="$1"
+  local nohup_line
+  local capture_line
+  local write_line
+  local kill_line
+
+  nohup_line="$(
+    grep -nE 'nohup[[:space:]]+ollama[[:space:]]+serve' "$file" |
+      head -1 |
+      cut -d: -f1
+  )"
+
+  capture_line="$(
+    grep -nF 'local pid=$!' "$file" |
+      head -1 |
+      cut -d: -f1
+  )"
+
+  write_line="$(
+    grep -nF 'echo "$pid" > "$pid_file"' "$file" |
+      head -1 |
+      cut -d: -f1
+  )"
+
+  kill_line="$(
+    grep -nF 'kill -0 "$pid"' "$file" |
+      head -1 |
+      cut -d: -f1
+  )"
+
+  [[ -n "$nohup_line" ]]
+  [[ -n "$capture_line" ]]
+  [[ -n "$write_line" ]]
+  [[ -n "$kill_line" ]]
+
+  (( nohup_line < capture_line ))
+  (( capture_line < write_line ))
+  (( write_line < kill_line ))
+}
+
+echo "=== Syntaxe des tests et installateurs ==="
+
+check "test_pid_fidelity.sh syntaxe" \
+  bash -n tests/test_pid_fidelity.sh
+
+for script in "${SCRIPTS[@]}"; do
+  check "$script: syntaxe Bash" \
+    bash -n "$script"
+done
+
+
+echo ""
 echo "=== Fonction start_ollama_manual ==="
-check "install.sh: fonction définie"        grep -q 'start_ollama_manual()' install.sh
-check "v1 installer: fonction définie"      grep -q 'start_ollama_manual()' auto-install-kali-lite-v1-novision.sh
-check "v2 installer: fonction définie"      grep -q 'start_ollama_manual()' auto-install-kali-lite-v2-vision.sh
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Capture PID dans le même contexte (nohup … & ; local pid=$!)
-# ═══════════════════════════════════════════════════════════════════════════════
+for script in "${SCRIPTS[@]}"; do
+  check "$script: fonction start_ollama_manual définie" \
+    grep -q '^start_ollama_manual()' "$script"
 
-echo "=== Capture PID dans même contexte ==="
-check "install.sh: capture locale de \$!"        grep -q 'local pid=\$!' install.sh
-check "v1 installer: capture locale de \$!"      grep -q 'local pid=\$!' auto-install-kali-lite-v1-novision.sh
-check "v2 installer: capture locale de \$!"      grep -q 'local pid=\$!' auto-install-kali-lite-v2-vision.sh
+  check "$script: paramètre log_file" \
+    grep -q 'local log_file="\$1"' "$script"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Pas de double write PID dans le même chemin de code
-# ═══════════════════════════════════════════════════════════════════════════════
+  check "$script: paramètre pid_file" \
+    grep -q 'local pid_file="\$2"' "$script"
+done
 
-echo "=== Pas de double write ==="
-check "install.sh: echo > pid_file présent"     bash -c "grep -q 'echo.*>.*pid_file' install.sh"
-check "v1 installer: echo > OLLAMA_PID présent" bash -c "grep -q 'echo.*>.*OLLAMA_PID\|echo.*>.*pid_file' auto-install-kali-lite-v1-novision.sh"
-check "v2 installer: echo > OLLAMA_PID présent" bash -c "grep -q 'echo.*>.*OLLAMA_PID\|echo.*>.*pid_file' auto-install-kali-lite-v2-vision.sh"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Pas de pipeline \$! trompeur (tee, subshell)
-# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Lancement Ollama centralisé ==="
 
-echo "=== Pas de pipeline \$! trompeur ==="
-check "install.sh: pas de tee PID"              bash -c "! grep 'tee.*PID' install.sh"
-check "v1 installer: pas de tee PID"            bash -c "! grep 'tee.*OLLAMA_PID' auto-install-kali-lite-v1-novision.sh"
-check "v2 installer: pas de tee PID"            bash -c "! grep 'tee.*OLLAMA_PID' auto-install-kali-lite-v2-vision.sh"
+for script in "${SCRIPTS[@]}"; do
+  check_count \
+    "$script: un seul nohup ollama serve" \
+    1 \
+    'nohup[[:space:]]+ollama[[:space:]]+serve' \
+    "$script"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Vérification du processus vivant (kill -0)
-# ═══════════════════════════════════════════════════════════════════════════════
+  check "$script: redirection vers log_file" \
+    grep -q 'nohup ollama serve > "\$log_file" 2>&1 &' "$script"
 
-echo "=== Vérification processus vivant ==="
-check "install.sh: kill -0 dans start_ollama_manual"    grep -q 'kill -0.*\$pid' install.sh
-check "v1 installer: kill -0 dans start_ollama_manual"  grep -q 'kill -0.*\$pid' auto-install-kali-lite-v1-novision.sh
-check "v2 installer: kill -0 dans start_ollama_manual"  grep -q 'kill -0.*\$pid' auto-install-kali-lite-v2-vision.sh
+  check_absent \
+    "$script: aucun lancement Ollama via pipeline" \
+    'ollama[[:space:]]+serve.*\|.*&' \
+    "$script"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Nettoyage PID en cas d'échec (rm -f)
-# ═══════════════════════════════════════════════════════════════════════════════
+  check_absent \
+    "$script: aucun nohup via subshell command substitution" \
+    '\$\(.*nohup[[:space:]]+ollama[[:space:]]+serve' \
+    "$script"
+done
 
-echo "=== Nettoyage PID en cas d'échec ==="
-check "install.sh: rm -f PID_FILE en cas d'échec"   grep -q 'rm -f.*pid_file' install.sh
-check "v1 installer: rm -f PID_FILE en cas d'échec"  grep -q 'rm -f.*pid_file' auto-install-kali-lite-v1-novision.sh
-check "v2 installer: rm -f PID_FILE en cas d'échec"  grep -q 'rm -f.*pid_file' auto-install-kali-lite-v2-vision.sh
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tous les chemins de démarrage utilisent start_ollama_manual
-# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Capture fidèle de \$! ==="
 
-echo "=== Tous les chemins utilisent start_ollama_manual ==="
-check "install.sh: nohup dans install_linux"         grep -A15 'systemctl non disponible' install.sh | grep -q 'start_ollama_manual' || bash -c "grep -q 'start_ollama_manual.*PID_FILE' install.sh"
-check "v1 installer: nohup dans install_linux"       grep -A15 'systemd inactive' auto-install-kali-lite-v1-novision.sh | grep -q 'start_ollama_manual' || bash -c "grep -q 'start_ollama_manual.*OLLAMA_PID' auto-install-kali-lite-v1-novision.sh"
-check "v2 installer: nohup dans install_linux"       grep -A15 'systemd inactive' auto-install-kali-lite-v2-vision.sh | grep -q 'start_ollama_manual' || bash -c "grep -q 'start_ollama_manual.*OLLAMA_PID' auto-install-kali-lite-v2-vision.sh"
+for script in "${SCRIPTS[@]}"; do
+  check_count \
+    "$script: une capture locale de \$!" \
+    1 \
+    'local pid=\$!' \
+    "$script"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Permissions du fichier PID (chmod)
-# ═══════════════════════════════════════════════════════════════════════════════
+  check "$script: PID écrit dans pid_file" \
+    grep -Fq 'echo "$pid" > "$pid_file"' "$script"
 
+  check_absent \
+    "$script: PID non reconstruit avec pgrep" \
+    'pid=.*pgrep|PID=.*pgrep' \
+    "$script"
+
+  check_absent \
+    "$script: PID non reconstruit avec pidof" \
+    'pid=.*pidof|PID=.*pidof' \
+    "$script"
+done
+
+
+echo ""
+echo "=== Ordre de capture PID ==="
+
+for script in "${SCRIPTS[@]}"; do
+  check "$script: nohup → \$! → pid_file → kill -0" \
+    check_pid_order "$script"
+done
+
+
+echo ""
+echo "=== Vérification du processus ==="
+
+for script in "${SCRIPTS[@]}"; do
+  check "$script: kill -0 vérifie le PID capturé" \
+    grep -q 'kill -0 "\$pid"' "$script"
+
+  check_absent \
+    "$script: aucun kill -0 sur PID reconstruit" \
+    'kill -0.*pgrep|kill -0.*pidof' \
+    "$script"
+done
+
+
+echo ""
+echo "=== Nettoyage en cas d'échec ==="
+
+for script in "${SCRIPTS[@]}"; do
+  check "$script: suppression du pid_file sur échec" \
+    grep -q 'rm -f -- "\$pid_file"' "$script"
+done
+
+
+echo ""
 echo "=== Permissions du fichier PID ==="
-check "install.sh: chmod sur PID_FILE"        grep -q 'chmod.*pid_file' install.sh
-check "v1 installer: chmod sur PID_FILE"      grep -q 'chmod.*pid_file' auto-install-kali-lite-v1-novision.sh
-check "v2 installer: chmod sur PID_FILE"      grep -q 'chmod.*pid_file' auto-install-kali-lite-v2-vision.sh
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Résultats finaux
-# ═══════════════════════════════════════════════════════════════════════════════
+for script in "${SCRIPTS[@]}"; do
+  check "$script: chmod explicite du pid_file" \
+    grep -Eq 'chmod[[:space:]]+0?644[[:space:]]+"\$pid_file"' "$script"
+done
+
+
+echo ""
+echo "=== Vérification API Ollama ==="
+
+for script in "${SCRIPTS[@]}"; do
+  check "$script: fonction wait_for_ollama_api" \
+    grep -q '^wait_for_ollama_api()' "$script"
+
+  check "$script: endpoint local Ollama" \
+    grep -q '127\.0\.0\.1:11434/api/tags' "$script"
+
+  check "$script: échec si API indisponible" \
+    grep -q 'wait_for_ollama_api.*||.*err' "$script"
+done
+
+
+echo ""
+echo "=== Absence des anciens patterns PID fragiles ==="
+
+for script in "${SCRIPTS[@]}"; do
+  check_absent \
+    "$script: aucun tee utilisé pour écrire le PID" \
+    'tee.*pid|tee.*PID' \
+    "$script"
+
+  check_absent \
+    "$script: aucun \$! dans une substitution de commande" \
+    '\$\(.*\$!' \
+    "$script"
+
+  check_absent \
+    "$script: aucun PID écrit depuis pgrep" \
+    'pgrep.*>[[:space:]]*.*pid|pgrep.*>[[:space:]]*.*PID' \
+    "$script"
+
+  check_absent \
+    "$script: aucun PID écrit depuis pidof" \
+    'pidof.*>[[:space:]]*.*pid|pidof.*>[[:space:]]*.*PID' \
+    "$script"
+done
+
 
 echo ""
 echo "=== Résultats ==="
-echo "  Passés: $PASS / $TOTAL"
-echo "  Échoués: $FAIL / $TOTAL"
-echo ""
 
-if [ "$FAIL" -gt 0 ]; then
-  echo "  CERTAINS TESTS ONT ECHOUÉ"
+echo "  Passés  : $PASS / $TOTAL"
+echo "  Échoués : $FAIL / $TOTAL"
+
+if [[ "$FAIL" -gt 0 ]]; then
+  echo ""
+  echo "  RESULTAT: FAIL — INVARIANT PID NON RESPECTE"
   exit 1
 fi
-echo "  TOUS LES TESTS PASSES"
+
+echo ""
+echo "  RESULTAT: PASS — FIDELITE PID VALIDEE"
 exit 0
