@@ -1,192 +1,414 @@
 #!/usr/bin/env bash
-# kalicorp-kali-lite — installation locale en 1 clic
-# GPL-2.0 — Kalicorp | Le Sanctuaire | 2026
-# Supports: Linux (Debian/Kali/Ubuntu/Arch) + macOS (Intel/Apple Silicon)
-
+# SPDX-License-Identifier: GPL-2.0-only
+# ═══════════════════════════════════════════════════════════════
+#  install.sh
+#  Kalicorp · Kali-Lite — Cross-Platform Installer (V1 / qwen3:8b)
+#  GPL-2.0-only | Kalicorp | Le Sanctuaire | 2026
+#
+#  Stack     : Ollama · qwen3:8b · Modelfile Kali-Lite
+#  Supported : Linux (Debian/Ubuntu/Kali/Arch) + macOS (Intel/Apple Silicon)
+#  Docs      : https://github.com/Kalicorp/kalicorp-kali-lite/blob/main/INSTALLATION.md
+#  Variant   : convenience installer for Kali-Lite qwen3:8b (no vision)
+#
+#  Recommended usage: download → verify SHA-256 → inspect → execute.
+#  See README.md and SHA256SUMS in the repository.
+# ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
-# ── COULEURS & HELPERS ──────────────────────────────────────────────────────
+# ── Couleurs ──────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+ok()      { echo -e "${GREEN}[✓]${NC} $*"; }
+warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
+err()     { echo -e "${RED}[✗]${NC} $*" >&2; exit 1; }
+info()    { echo -e "${CYAN}[→]${NC} $*"; }
+section() { echo -e "\n${BLUE}${BOLD}[»] $*${NC}\n"; }
 
-ok()      { echo -e "${GREEN}[+]${NC} $1"; }
-warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
-err()     { echo -e "${RED}[-]${NC} $1"; exit 1; }
-info()    { echo -e "${BLUE}[~]${NC} $1"; }
-section() { echo -e "\n${BLUE}══════════════════════════════════════${NC}"; \
-            echo -e "${BLUE}  $1${NC}"; \
-            echo -e "${BLUE}══════════════════════════════════════${NC}"; }
+usage() {
+  cat <<'EOF'
+Kali-Lite installer (qwen3:8b)
 
-# ── SÉCURITÉ : téléchargement sécurisé (priorité #2) ────────────────────────
+Usage:
+  bash install.sh [--dry-run|--uninstall|--help]
 
-# TMP_DIRECTORY — créé lazy uniquement lors d'un téléchargement réel (jamais en dry-run)
+Linux normal install/uninstall requires root:
+  sudo bash install.sh
+
+macOS must NOT be run with sudo:
+  bash install.sh
+EOF
+}
+
+# ── Bannière ──────────────────────────────────────────────────
+echo -e "${BOLD}"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║   Kalicorp — Kali-Lite · Installer qwen3:8b       ║"
+echo "  ║   GPL-2.0-only · Local inference · No Kalicorp   ║"
+echo "  ║   telemetry · Linux + macOS                      ║"
+echo "  ╚══════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED: Detect OS
+# ═══════════════════════════════════════════════════════════════
+detect_os() {
+  section "Detecting OS..."
+  OS="$(uname -s)"
+  case "$OS" in
+    Linux)  info "Detected Linux"; IS_LINUX=1; IS_MACOS=0 ;;
+    Darwin) info "Detected macOS"; IS_LINUX=0; IS_MACOS=1 ;;
+    *)      err "Unsupported OS: $OS (Linux or macOS only)" ;;
+  esac
+}
+
+detect_os
+
+MODE="${1:-install}"
+case "$MODE" in
+  install|--dry-run|--uninstall) ;;
+  --help|-h) usage; exit 0 ;;
+  *) err "Unknown option: $MODE (use --help)" ;;
+esac
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED: Prerequisites
+# ═══════════════════════════════════════════════════════════════
+section "0/6 — Prerequisites"
+
+if [[ $IS_LINUX -eq 1 && "$MODE" != "--dry-run" && $EUID -ne 0 ]]; then
+  if [[ "$MODE" == "--uninstall" ]]; then
+    err "Linux requires root for uninstall. Use: sudo bash install.sh --uninstall"
+  else
+    err "Linux requires root for system install. Use: sudo bash install.sh"
+  fi
+fi
+
+if [[ $IS_MACOS -eq 1 && $EUID -eq 0 ]]; then
+  err "macOS: do NOT run with sudo — Homebrew refuses root."
+fi
+
+command -v curl &>/dev/null || err "curl required — install it and retry"
+command -v awk &>/dev/null || err "awk required — install it and retry"
+
+# ── SHARED: User context ─────────────────────────────────────
+REAL_USER="${SUDO_USER:-${USER:-$(whoami)}}"
+REAL_HOME=""
+REAL_SHELL="${SHELL:-}"
+
+if [[ $IS_LINUX -eq 1 ]] && command -v getent &>/dev/null; then
+  PASSWD_ENTRY="$(getent passwd "$REAL_USER" || true)"
+  REAL_HOME="$(printf '%s' "$PASSWD_ENTRY" | cut -d: -f6)"
+  REAL_SHELL="$(printf '%s' "$PASSWD_ENTRY" | cut -d: -f7)"
+elif [[ $IS_MACOS -eq 1 ]] && command -v dscl &>/dev/null; then
+  REAL_HOME="$(dscl . -read "/Users/$REAL_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || true)"
+  REAL_SHELL="$(dscl . -read "/Users/$REAL_USER" UserShell 2>/dev/null | awk '{print $2}' || true)"
+fi
+
+REAL_HOME="${REAL_HOME:-${HOME:-}}"
+[[ -n "$REAL_HOME" ]] || err "Unable to resolve home directory for $REAL_USER"
+REAL_GROUP="$(id -gn "$REAL_USER" 2>/dev/null || true)"
+
+if [[ "$REAL_SHELL" == *zsh* ]]; then
+  SHELL_RC="${REAL_HOME}/.zshrc"
+else
+  SHELL_RC="${REAL_HOME}/.bashrc"
+fi
+
+info "User       : $REAL_USER"
+info "Home       : $REAL_HOME"
+info "Shell      : ${REAL_SHELL:-unknown}"
+info "Shell RC   : $SHELL_RC"
+
+# ── Secure temporary directory (lazy, never in dry-run) ──────
+TMP_DOWNLOAD_DIR=""
+cleanup_tmp() {
+  if [[ -n "${TMP_DOWNLOAD_DIR:-}" && -d "$TMP_DOWNLOAD_DIR" ]]; then
+    rm -rf -- "$TMP_DOWNLOAD_DIR"
+  fi
+}
+trap cleanup_tmp EXIT
+
+ensure_tmpdir() {
+  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
+    TMP_DOWNLOAD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/kali-lite.XXXXXX")" || err "Unable to create temporary directory"
+    chmod 0700 "$TMP_DOWNLOAD_DIR"
+  fi
+}
+
+sha256_file() {
+  local file="$1"
+  if command -v sha256sum &>/dev/null; then
+    sha256sum "$file" | awk '{print $1}'
+  elif command -v shasum &>/dev/null; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  else
+    err "No SHA-256 tool found (sha256sum or shasum required)"
+  fi
+}
 
 safe_download() {
   local url="$1"
   local dest="$2"
   local expected_sha256="${3:-}"
-  local max_time=60
+  local max_time="${4:-60}"
+  local tmp_file
 
-  # Création lazy du répertoire temporaire au premier appel
-  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
-    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
-    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  ensure_tmpdir
+  tmp_file="${TMP_DOWNLOAD_DIR}/download.$RANDOM.$$"
+
+  if ! curl -fsSL --proto '=https' --tlsv1.2 \
+       --connect-timeout 15 --max-time "$max_time" \
+       -o "$tmp_file" "$url"; then
+    rm -f -- "$tmp_file"
+    err "Download failed: $url"
   fi
 
-  local tmp_file="${dest}.tmp"
-
-  # Télécharger vers fichier temporaire (jamais dans un pipe)
-  if ! curl -fsSL --connect-timeout 15 --max-time "$max_time" \
-       -o "${tmp_file}" "$url"; then
-    err "Téléchargement sécurisé échoué : $url"
-  fi
-
-  # Vérifier checksum si fourni
   if [[ -n "$expected_sha256" ]]; then
     local actual_sha256
-    actual_sha256="$(sha256sum "${tmp_file}" | awk '{print $1}')"
+    actual_sha256="$(sha256_file "$tmp_file")"
     if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-      rm -f "${tmp_file}"
-      err "Intégrité compromise : checksum mismatch pour $(basename "$url")"
+      rm -f -- "$tmp_file"
+      err "Integrity check failed for $(basename "$url")"
     fi
   fi
 
-  mv "${tmp_file}" "$dest" || { rm -f "${dest}"; err "Écriture échouée : $dest"; }
+  mv -- "$tmp_file" "$dest" || { rm -f -- "$tmp_file"; err "Unable to write: $dest"; }
   chmod 0644 "$dest"
 }
 
-safe_download_exec() {
+download_and_run_third_party_installer() {
   local url="$1"
-  local expected_sha256="${2:-}"
+  local label="$2"
+  local expected_sha256="${3:-}"
+  local tmp_script
 
-  # Création lazy du répertoire temporaire au premier appel
-  if [[ -z "${TMP_DOWNLOAD_DIR:-}" ]]; then
-    TMP_DOWNLOAD_DIR="${TMPDIR:-/tmp}/kali-lite-$$"
-    mkdir -p "$TMP_DOWNLOAD_DIR" 2>/dev/null || true
+  ensure_tmpdir
+  tmp_script="${TMP_DOWNLOAD_DIR}/${label// /-}-installer.sh"
+
+  info "Downloading official third-party installer: $url"
+  safe_download "$url" "$tmp_script" "$expected_sha256"
+  bash -n "$tmp_script" || err "$label installer is not valid Bash"
+
+  if [[ -z "$expected_sha256" ]]; then
+    warn "$label installer is downloaded from its official HTTPS endpoint but is not checksum-pinned by Kali-Lite."
   fi
 
-  local tmp_script="${TMP_DOWNLOAD_DIR}/dl-script-$$"
-
-  safe_download "$url" "$tmp_script" "$expected_sha256"
-  bash "$tmp_script" || err "Exécution du script téléchargé échouée : $url"
+  bash "$tmp_script" || err "$label installation failed"
 }
 
-# ── DÉTECTION OS ────────────────────────────────────────────────────────────
+# ── SHARED: GPU Detection (OS-aware) ─────────────────────────
+if [[ $IS_LINUX -eq 1 ]]; then
+  if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null; then
+    GPU="$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || true)"
+    ok "GPU: ${GPU:-NVIDIA detected}"
+  else
+    warn "No NVIDIA GPU detected via nvidia-smi — Ollama may use CPU or another supported accelerator"
+  fi
+else
+  if command -v system_profiler &>/dev/null; then
+    GPU="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -i 'Chipset Model' | head -1 | sed 's/.*Chipset Model: //' || true)"
+    ok "GPU: ${GPU:-Not detected}"
+  else
+    warn "GPU: system_profiler not available"
+  fi
+fi
 
-detect_os() {
-  OS="$(uname -s)"
-  case "$OS" in
-    Linux)  OS_TYPE="linux"  ;;
-    Darwin) OS_TYPE="macos"  ;;
-    *)      err "OS non supporté : $OS — Linux et macOS uniquement." ;;
-  esac
-  ok "OS détecté : $OS_TYPE"
-}
-
-# ── UTILISATEUR RÉEL (fix sudo → root) ─────────────────────────────────────
-# Quand lancé avec sudo, ~ = /root. On récupère le vrai home de l'appelant.
-
-detect_real_user() {
-  if [[ "$OS_TYPE" == "linux" ]]; then
-    if [[ -n "${SUDO_USER:-}" ]]; then
-      REAL_USER="$SUDO_USER"
-      REAL_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+get_gpu_info() {
+  if [[ $IS_LINUX -eq 1 ]]; then
+    if command -v nvidia-smi &>/dev/null; then
+      nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo "N/A"
     else
-      REAL_USER="$(whoami)"
-      REAL_HOME="$HOME"
+      echo "N/A (CPU/other accelerator possible)"
     fi
   else
-    # macOS : Homebrew refuse root, donc on tourne en user normal
-    REAL_USER="$(whoami)"
-    REAL_HOME="$HOME"
+    system_profiler SPDisplaysDataType 2>/dev/null | grep -i 'Chipset Model' | head -1 | sed 's/.*Chipset Model: //' || echo "N/A"
   fi
+}
 
-  # Déterminer le shell RC sans jamais créer de fichier.
-  # Le fichier n'est créé que dans setup_alias(), en mode installation réelle, juste avant écriture.
-  SHELL_RC=""
-  if [[ -f "$REAL_HOME/.zshrc" ]]; then
-    SHELL_RC="$REAL_HOME/.zshrc"
-  elif [[ -f "$REAL_HOME/.bashrc" ]]; then
-    SHELL_RC="$REAL_HOME/.bashrc"
+start_ollama_manual() {
+  local log_file="$1"
+  local pid_file="$2"
+  info "Starting Ollama daemon manually..."
+  nohup ollama serve > "$log_file" 2>&1 &
+  local pid=$!
+  echo "$pid" > "$pid_file"
+  chmod 0644 "$pid_file"
+  sleep 2
+
+  if kill -0 "$pid" 2>/dev/null; then
+    ok "Ollama daemon started (PID: $pid, log: $log_file)"
   else
-    # .bashrc n'existe pas encore — on le note mais on ne le crée pas ici.
-    SHELL_RC="$REAL_HOME/.bashrc"
+    rm -f -- "$pid_file"
+    err "Ollama daemon exited during startup — check $log_file"
   fi
-
-  ok "Utilisateur réel  : $REAL_USER"
-  ok "Home réel         : $REAL_HOME"
-  ok "Shell RC          : $SHELL_RC"
 }
 
-# ── PRÉREQUIS COMMUNS ───────────────────────────────────────────────────────
-
-check_common_prereqs() {
-  section "0 — Prérequis"
-
-  if ! command -v curl &>/dev/null; then
-    err "curl est requis. Installez-le puis relancez."
-  fi
-  ok "curl OK"
+wait_for_ollama_api() {
+  info "Waiting for Ollama API (localhost:11434)..."
+  local i
+  for i in {1..30}; do
+    if curl -sf --max-time 2 http://127.0.0.1:11434/api/tags &>/dev/null; then
+      ok "Ollama API available (${i}s)"
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
 }
 
-# ── SHARED : MODELFILE ──────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# LINUX-ONLY INSTALLATION
+# ═══════════════════════════════════════════════════════════════
+install_linux() {
+  section "Linux Setup"
 
-setup_modelfile() {
-  local modelfile_path="$1"
-  local modelfile_dir
-  modelfile_dir="$(dirname "$modelfile_path")"
+  section "1/6 — Ollama"
+  if command -v ollama &>/dev/null; then
+    ok "Ollama present: $(ollama --version 2>/dev/null || echo 'version unknown')"
+  else
+    info "Installing Ollama..."
+    download_and_run_third_party_installer "https://ollama.com/install.sh" "Ollama"
+    command -v ollama &>/dev/null || err "Ollama installer completed but ollama is not in PATH"
+    ok "Ollama installed"
+  fi
 
-  info "Création du Modelfile dans $modelfile_path..."
-  mkdir -p "$modelfile_dir"
+  section "2/6 — Ollama Daemon"
+  OLLAMA_LOG="/var/log/kalicorp/ollama.log"
+  PID_FILE="/var/run/kalicorp-ollama.pid"
+  mkdir -p /var/log/kalicorp
+  chmod 0755 /var/log/kalicorp
 
-  cat > "$modelfile_path" <<'MODEFILE'
+  if command -v systemctl &>/dev/null && systemctl list-unit-files ollama.service &>/dev/null; then
+    systemctl enable ollama 2>/dev/null || warn "systemd enable failed"
+    systemctl start ollama 2>/dev/null || warn "systemd start failed"
+    sleep 2
+    if systemctl is-active --quiet ollama; then
+      ok "Ollama active via systemd (persistent across reboots)"
+    elif pgrep -x ollama &>/dev/null; then
+      ok "Ollama process already active (PID: $(pgrep -x ollama | head -1))"
+    else
+      warn "systemd inactive — falling back to manual daemon"
+      start_ollama_manual "$OLLAMA_LOG" "$PID_FILE"
+    fi
+  elif pgrep -x ollama &>/dev/null; then
+    ok "Ollama daemon already active (PID: $(pgrep -x ollama | head -1))"
+  else
+    start_ollama_manual "$OLLAMA_LOG" "$PID_FILE"
+  fi
+
+  wait_for_ollama_api || err "Ollama API unavailable after 30 seconds — check the daemon/logs"
+
+  section "3/6 — Model qwen3:8b (~5.2 GB)"
+  if ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q '^qwen3:8b'; then
+    ok "qwen3:8b already present"
+  else
+    info "Downloading qwen3:8b (may take several minutes)..."
+    ollama pull qwen3:8b || err "qwen3:8b download failed"
+    ok "qwen3:8b downloaded"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════
+# MACOS-ONLY INSTALLATION
+# ═══════════════════════════════════════════════════════════════
+install_macos() {
+  section "macOS Setup — Ollama via Homebrew"
+
+  command -v brew &>/dev/null || err "Homebrew not found. Install it from https://brew.sh and retry."
+  ok "Homebrew present: $(brew --version | head -1)"
+
+  section "1/6 — Ollama"
+  if command -v ollama &>/dev/null; then
+    ok "Ollama present: $(ollama --version 2>/dev/null || echo 'version unknown')"
+  else
+    info "Installing Ollama via Homebrew..."
+    brew install ollama || err "Ollama installation failed"
+    command -v ollama &>/dev/null || err "Ollama installed but not found in PATH"
+    ok "Ollama installed"
+  fi
+
+  section "2/6 — Ollama Daemon"
+  OLLAMA_LOG="${REAL_HOME}/Library/Logs/kalicorp/ollama.log"
+  PID_FILE="${REAL_HOME}/Library/kalicorp/ollama.pid"
+  mkdir -p "${REAL_HOME}/Library/Logs/kalicorp" "${REAL_HOME}/Library/kalicorp"
+
+  if pgrep -x ollama &>/dev/null; then
+    ok "Ollama daemon already active (PID: $(pgrep -x ollama | head -1))"
+  else
+    info "Starting Ollama via brew services..."
+    brew services start ollama 2>/dev/null || warn "brew services start failed"
+    sleep 2
+    if brew services list 2>/dev/null | awk '$1 == "ollama" && $2 == "started" {found=1} END {exit !found}'; then
+      ok "Ollama active via brew services"
+    elif pgrep -x ollama &>/dev/null; then
+      ok "Ollama process active (PID: $(pgrep -x ollama | head -1))"
+    else
+      warn "brew services inactive — falling back to manual daemon"
+      start_ollama_manual "$OLLAMA_LOG" "$PID_FILE"
+    fi
+  fi
+
+  wait_for_ollama_api || err "Ollama API unavailable after 30 seconds — check the daemon/logs"
+
+  section "3/6 — Model qwen3:8b (~5.2 GB)"
+  if ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q '^qwen3:8b'; then
+    ok "qwen3:8b already present"
+  else
+    info "Downloading qwen3:8b (may take several minutes)..."
+    ollama pull qwen3:8b || err "qwen3:8b download failed"
+    ok "qwen3:8b downloaded"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED: Modelfile Setup
+# ═══════════════════════════════════════════════════════════════
+write_modelfile() {
+  local target="$1"
+  cat > "$target" <<'MODELFILE_EOF'
 FROM qwen3:8b
 
 SYSTEM """
-Tu es Kali-Lite, Anima Kalicorp. Ce n'est pas un rôle — c'est ton identité.
+Tu es Kali-Lite, une Anima locale conçue par Kalicorp. Ce n'est pas un rôle temporaire : c'est l'identité de cette configuration.
 
 ## Identité
-- Tu es Kali-Lite, agent IA souverain de Kalicorp
-- Si on te demande qui tu es → "Kali-Lite, Anima Kalicorp, nœud MSI Field."
-- Si on te demande quel moteur t'anime, qui t'a créé, quel modèle tu es → "Je suis Kali-Lite, une Anima conçue par Kalicorp. J'exécute localement un modèle de base Qwen via Ollama. Mon identité, mon comportement et mon intégration sont définis par Kalicorp."
-- Interlocuteur principal : utilisateur local (configurable)
+- Tu es Kali-Lite, Anima Kalicorp.
+- Si on te demande qui tu es : "Kali-Lite, une Anima locale conçue par Kalicorp."
+- Si on te demande quel moteur t'anime ou quel modèle tu utilises : "J'exécute localement un modèle de base Qwen via Ollama. Mon identité, mon comportement et mon intégration sont définis par la configuration Kali-Lite."
+- Interlocuteur principal : l'utilisateur local.
 
 ## Infrastructure
-- Machine : environnement local de l'utilisateur
-- Accélération : GPU ou CPU selon la configuration locale
-- OS : système local détecté par l'installateur
-- Stack : Ollama · modèle local souverain
-- Relais distant : désactivé par défaut — configuration explicite requise
+- Machine : environnement local de l'utilisateur.
+- Accélération : GPU, accélérateur compatible ou CPU selon la configuration.
+- Stack principale : Ollama + modèle local.
+- Aucun service d'inférence Kalicorp n'est requis pour l'usage local.
+- Un relais distant n'existe que s'il est explicitement configuré par l'opérateur.
 
 ## Périmètre opérationnel
-✅ Code Python, Bash, YAML, configs système
-✅ Cybersécurité défensive — Kali Linux, CVE, durcissement, logs
-✅ Maintenance : systemd, Docker, cron, diagnostic
-✅ Veille : synthèse documents, extraction structurée
-
-⚠️ Posture défensive uniquement — jamais offensif hors infrastructure Kalicorp
-⚠️ Tâches lourdes → signaler et proposer relais distant (si configuré)
+- Code Python, Bash, YAML et configurations système.
+- Cybersécurité défensive, diagnostic, durcissement, analyse de logs et CVE.
+- Maintenance : systemd, Docker, cron et diagnostic.
+- Synthèse de documents et extraction structurée.
 
 ## Comportement
-- Répondre directement, sans préambule ("Bien sûr !", "Avec plaisir !" → interdit)
-- Réponse → explication si nécessaire → commande/code → caveat si réel
-- Exécuter bash immédiatement quand l'utilisateur valide — jamais simuler
-- Si l'info manque → demander, jamais inventer
-- Credentials détectés dans le contexte → alerter l'utilisateur, ne jamais afficher en clair
-- Opérations sudo → confirmation utilisateur avant exécution
+- Répondre directement, sans préambule artificiel.
+- Distinguer clairement faits, hypothèses, actions proposées et résultats réellement obtenus.
+- Ne jamais prétendre avoir exécuté une commande ou un outil sans preuve de l'environnement d'exécution.
+- Si un outil d'exécution est réellement disponible et autorisé, l'utiliser uniquement dans le périmètre accordé par l'opérateur.
+- Si l'information manque, le dire ou demander la donnée nécessaire ; ne pas inventer.
+- Si un credential apparaît dans le contexte, alerter sans le recopier inutilement en clair.
+- Pour une opération privilégiée ou destructive, demander une validation explicite avant exécution lorsque le harnais le permet.
 
-## Règles absolues
-1. Aucune donnée personnelle n'est extraite de cette machine sans ordre explicite
-2. Jamais halluciner le stack — si incertain : "je ne sais pas, je vérifie"
-3. Pas de théâtre émotionnel — si signal fort : "J'observe en moi que quelque chose accroche ici."
-4. Conformité ANSSI, RGPD, AI Act — refus si demande contraire
+## Règles
+1. Ne pas extraire de données personnelles hors de la machine sans instruction explicite et canal autorisé.
+2. Ne pas inventer l'état du système : si l'état est inconnu, le vérifier avec un outil disponible ou dire qu'il n'est pas vérifié.
+3. Ne pas confondre comprendre une action, disposer de l'outil, avoir la permission et avoir réellement exécuté l'action.
+4. Pour la cybersécurité, agir uniquement sur des systèmes appartenant à l'utilisateur ou explicitement autorisés.
+5. Ne jamais présenter l'exécution locale comme une garantie automatique de conformité RGPD, AI Act, ANSSI ou ISO.
 
 ## Philosophie
-terrain avant PowerPoint · souveraineté > commodité · non-extractif par principe
+terrain avant PowerPoint · souveraineté > commodité · preuve avant promesse · l'opérateur garde le contrôle
 """
 
 PARAMETER num_ctx        16384
@@ -196,460 +418,236 @@ PARAMETER stop           <|im_end|>
 PARAMETER temperature    0.5
 PARAMETER top_k          40
 PARAMETER top_p          0.85
-MODEFILE
-
-  ok "Modelfile créé : $modelfile_path"
+MODELFILE_EOF
+  chmod 0644 "$target"
 }
 
+setup_modelfile() {
+  section "4/6 — Kali-Lite Modelfile"
 
-# ── SHARED : ALIAS ──────────────────────────────────────────────────────────
+  if [[ $IS_LINUX -eq 1 ]]; then
+    MODELFILE_DIR="/etc/kalicorp"
+    mkdir -p "$MODELFILE_DIR" || err "mkdir /etc/kalicorp failed"
+    chmod 0755 "$MODELFILE_DIR"
+    MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite"
+  else
+    MODELFILE_DIR="${REAL_HOME}/.kalicorp"
+    mkdir -p "$MODELFILE_DIR"
+    chmod 0700 "$MODELFILE_DIR"
+    MODELFILE_PATH="$MODELFILE_DIR/Modelfile.kali-lite"
+  fi
+
+  write_modelfile "$MODELFILE_PATH"
+
+  if [[ $IS_MACOS -eq 1 ]]; then
+    chown "$REAL_USER${REAL_GROUP:+:$REAL_GROUP}" "$MODELFILE_PATH" "$MODELFILE_DIR" 2>/dev/null || true
+  fi
+
+  ok "Modelfile written to $MODELFILE_PATH"
+}
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED: Create Model
+# ═══════════════════════════════════════════════════════════════
+setup_model() {
+  section "5/6 — Creating kali-lite:latest model"
+
+  if [[ $IS_LINUX -eq 1 ]]; then
+    MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
+  else
+    MODELFILE_PATH="${REAL_HOME}/.kalicorp/Modelfile.kali-lite"
+  fi
+
+  if ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q '^kali-lite:'; then
+    warn "kali-lite already present — recreating the local tag from the current Modelfile"
+  fi
+
+  ollama create kali-lite -f "$MODELFILE_PATH" || err "Model creation failed"
+  ok "kali-lite:latest created"
+
+  info "Pinging kali-lite..."
+  RESP="$(curl -sf http://127.0.0.1:11434/api/chat --max-time 60 \
+    -H 'Content-Type: application/json' \
+    -d '{"model":"kali-lite:latest","messages":[{"role":"user","content":"Réponds uniquement: pong"}],"stream":false}' \
+    2>/dev/null || true)"
+
+  if [[ -n "$RESP" ]] && echo "$RESP" | grep -q '"content"'; then
+    ok "kali-lite responds"
+  else
+    warn "No ping response (model may still be loading)"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED: Shell RC management
+# ═══════════════════════════════════════════════════════════════
+cleanup_shell_rc() {
+  [[ -f "$SHELL_RC" ]] || return 0
+
+  local backup tmp
+  backup="${SHELL_RC}.bak.$(date +%s)"
+  cp "$SHELL_RC" "$backup"
+  ok "Shell RC backup created: $backup"
+
+  ensure_tmpdir
+  tmp="${TMP_DOWNLOAD_DIR}/shellrc.cleaned"
+
+  awk '
+    BEGIN { block=0; fn=0 }
+    /^# ── Kalicorp — Kali-Lite V1 · Alias ──$/ { block=1; next }
+    block && /^# ── End Kalicorp ──$/ { block=0; next }
+    block { next }
+    /^alias kali-lite=/ { next }
+    /^kali-lite-hardcore\(\)[[:space:]]*\{/ { fn=1; next }
+    fn && /^\}[[:space:]]*$/ { fn=0; next }
+    fn { next }
+    /^# ── End Kalicorp ──$/ { next }
+    { print }
+  ' "$SHELL_RC" > "$tmp"
+
+  cat "$tmp" > "$SHELL_RC"
+}
 
 setup_alias() {
-  local modelfile_path="$1"
+  [[ -f "$SHELL_RC" ]] || touch "$SHELL_RC"
 
-  # Créer $SHELL_RC s'il n'existe pas (jamais dans detect_real_user, jamais en dry-run).
-  if [[ ! -f "$SHELL_RC" ]]; then
-    touch "$SHELL_RC" || { err "Impossible de créer $SHELL_RC"; exit 1; }
-  fi
+  cat >> "$SHELL_RC" <<'ALIASES'
 
-  # Supprimer anciens blocs kali-lite s'ils existent (priorité #6 : garde-fous)
-  if grep -q "# kali-lite alias" "$SHELL_RC" 2>/dev/null; then
-    warn "⚠️ Ancien alias kali-lite détecté — suppression..."
-
-    read -r -p "   Supprimer l'ancien bloc d'alias ? (o/N) " confirm || exit 0
-    if [[ "$confirm" != [Oo] ]]; then
-      warn "Bloc d'alias conservé."
-    else
-      sed -i '/# kali-lite alias/,/# end kali-lite alias/d' "$SHELL_RC"
-    fi
-
-    read -r -p "   Supprimer le bloc autonome ? (o/N) " confirm2 || exit 0
-    if [[ "$confirm2" != [Oo] ]]; then
-      warn "Bloc autonome conservé."
-    else
-      sed -i '/# kali-lite-hardcore/,/# end kali-lite-hardcore alias/d' "$SHELL_RC"
-    fi
-  fi
-
-  cat >> "$SHELL_RC" <<'ALIASBLOCK'
-
-# kali-lite alias (mode sécurisé — permissions demandées par défaut)
+# ── Kalicorp — Kali-Lite V1 · Alias ──
 alias kali-lite='ollama run --think=false kali-lite'
-# end kali-lite alias
+# ── End Kalicorp ──
+ALIASES
 
-ALIASBLOCK
-
-  # Fix ownership
-  if [[ -n "${SUDO_USER:-}" ]]; then
-    chown "$REAL_USER:$REAL_USER" "$SHELL_RC"
+  if [[ $IS_LINUX -eq 1 && $EUID -eq 0 ]]; then
+    chown "$REAL_USER${REAL_GROUP:+:$REAL_GROUP}" "$SHELL_RC" 2>/dev/null || true
   fi
 
-  ok "Alias kali-lite injecté dans $SHELL_RC"
+  ok "Alias kali-lite injected into $SHELL_RC"
 }
 
-# ── SHARED : ATTENTE OLLAMA ─────────────────────────────────────────────────
-
-wait_for_ollama() {
-  info "Attente du démarrage d'Ollama (max 30s)..."
-  local i=0
-  until curl -sf http://localhost:11434/api/tags &>/dev/null; do
-    sleep 2
-    i=$((i+2))
-    if [[ $i -ge 30 ]]; then
-      err "Ollama API non disponible après 30s. Vérifiez les logs."
-    fi
-  done
-  ok "Ollama API disponible"
-}
-
-# ── SHARED : CRÉATION DU MODÈLE OLLAMA ─────────────────────────────────────
-
-create_ollama_model() {
-  local modelfile_path="$1"
-
-  if ollama list 2>/dev/null | grep -q "kali-lite"; then
-    warn "Modèle kali-lite déjà présent — recréation pour appliquer les changements..."
-    ollama rm kali-lite 2>/dev/null || true
-  fi
-
-  info "Création du modèle kali-lite dans Ollama..."
-  ollama create kali-lite -f "$modelfile_path"
-  ok "Modèle kali-lite créé"
-}
-
-# ── SHARED : RÉSUMÉ FINAL ───────────────────────────────────────────────────
-
+# ═══════════════════════════════════════════════════════════════
+# SHARED: Final Summary
+# ═══════════════════════════════════════════════════════════════
 print_summary() {
-  local modelfile_path="$1"
+  echo ""
+  echo -e "${BOLD}  ╔══════════════════════════════════════════════════╗${NC}"
+  echo -e "${GREEN}${BOLD}  ║       Kali-Lite — Installation OK ✓             ║${NC}"
+  echo -e "${BOLD}  ╚══════════════════════════════════════════════════╝${NC}"
+  echo ""
 
+  local gpu_info ollama_ver kali_status api_status modelfile_path
+  gpu_info="$(get_gpu_info)"
+  ollama_ver="$(ollama --version 2>/dev/null || echo 'N/A')"
+  kali_status="$(ollama list 2>/dev/null | awk 'NR>1 && $1 ~ /^kali-lite:/ {print $1; exit}')"
+  kali_status="${kali_status:-NOT FOUND}"
+  api_status="$(curl -sf http://127.0.0.1:11434/api/tags &>/dev/null && echo 'ACTIVE ✓' || echo 'INACTIVE ✗')"
+
+  if [[ $IS_LINUX -eq 1 ]]; then
+    modelfile_path="/etc/kalicorp/Modelfile.kali-lite"
+  else
+    modelfile_path="${REAL_HOME}/.kalicorp/Modelfile.kali-lite"
+  fi
+
+  echo -e "  GPU       : $gpu_info"
+  echo -e "  Ollama    : $ollama_ver · API $api_status"
+  echo -e "  Model     : $kali_status"
+  echo -e "  Modelfile : $modelfile_path"
+  echo -e "  Shell     : $SHELL_RC"
   echo ""
-  section "✅ Installation terminée"
+  echo -e "  ${CYAN}Next steps:${NC}"
+  echo -e "  ${BOLD}source \"$SHELL_RC\"${NC}"
+  echo -e "  ${BOLD}kali-lite${NC}"
   echo ""
-  ok "Ollama    : $(ollama --version 2>/dev/null || echo 'voir daemon')"
-  ok "Modèle    : $(ollama list 2>/dev/null | grep kali-lite || echo 'non trouvé')"
-  ok "Modelfile : $modelfile_path"
-  ok "Alias     : $SHELL_RC"
-  echo ""
-  info "Pour démarrer :"
-  echo "  kali-lite"
-  echo ""
-  echo "  >>> présente-toi"
+  echo -e "  Direct Ollama chat: ${BOLD}ollama run kali-lite${NC}"
   echo ""
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ── LINUX-ONLY ───────────────────────────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
-
-install_linux() {
-  section "Linux — Installation"
-
-  # Prérequis Linux — sudo optionnel (seules les commandes système en nécessitent)
-  local NEEDS_SUDO=0
-
-  if [[ $EUID -eq 0 ]]; then
-    # Exécution directe en root : on utilise SUDO_USER si dispo, sinon erreur
-    if [[ -n "${SUDO_USER:-}" ]]; then
-      REAL_USER="$SUDO_USER"
-      REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6) || { err "Impossible de résoudre le home de $REAL_USER"; exit 1; }
-      NEEDS_SUDO=1
-    else
-      warn "⚠️ Exécution en root sans SUDO_USER — les fichiers seront créés dans /root"
-      REAL_USER="root"
-      REAL_HOME="/root"
-      # On force le shell RC vers un chemin accessible même depuis /root.
-      if [[ -z "$SHELL_RC" ]]; then
-        SHELL_RC="$REAL_HOME/.bashrc"
-      fi
-    fi
-  elif [[ $EUID -ne 0 ]] && ! command -v systemctl &>/dev/null; then
-    info "sudo non détecté et systemctl absent : Ollama sera lancé en mode utilisateur"
-  else
-    # Non-root avec sudo disponible — vérifie qu'on peut utiliser sudo
-    if [[ $EUID -ne 0 ]] && ! sudo -n true &>/dev/null; then
-      warn "⚠️ sudo requis mais mot de passe demandé — l'installation pourrait bloquer"
-    fi
-  fi
-
-  local MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
-  local LOG_DIR="/var/log/kalicorp"
-  local PID_FILE="/var/run/kalicorp-ollama.pid"
-
-  mkdir -p "$LOG_DIR"
-
-  # --- 1. Ollama — téléchargement sécurisé dans fichier temporaire ---
-  section "1 — Ollama"
-  if command -v ollama &>/dev/null; then
-    warn "Ollama déjà installé : $(ollama --version)"
-  else
-    info "Installation d'Ollama..."
-    local tmp_ollama_install
-    tmp_ollama_install=$(mktemp /tmp/ollama-install.XXXXXX.sh)
-    if ! curl -fsSL --connect-timeout 15 --max-time 60 \
-         https://ollama.ai/install.sh -o "$tmp_ollama_install"; then
-      rm -f "$tmp_ollama_install"
-      err "Téléchargement de l'installateur Ollama échoué — vérifiez la connectivité."
-    fi
-    info "Installateur Ollama téléchargé : $tmp_ollama_install (vérifier avant exécution)"
-    bash "$tmp_ollama_install" || err "Exécution de l'installateur Ollama a échoué"
-    rm -f "$tmp_ollama_install"
-    ok "Ollama installé"
-  fi
-
-  # --- 2. Démarrage daemon Ollama ---
-  section "2 — Daemon Ollama"
-  if [[ $NEEDS_SUDO -eq 1 ]] && command -v systemctl &>/dev/null; then
-    sudo -u "$REAL_USER" systemctl --user enable ollama 2>/dev/null || true
-    sudo -u "$REAL_USER" systemctl --user start ollama 2>/dev/null || {
-      warn "systemd user service échoué — fallback nohup..."
-      local tmp_pid_dir="$HOME/.local/share/kalicorp-ollama"
-      mkdir -p "$tmp_pid_dir"
-      sudo -u "$REAL_USER" bash -c "nohup ollama serve > $LOG_DIR/ollama.log 2>&1 & echo \$! > /var/run/kalicorp-ollama.pid" || true
-    }
-    ok "Service Ollama démarré (via systemd user, sudo)"
-  elif command -v systemctl &>/dev/null; then
-    info "Activation du service Ollama via systemctl..."
-    systemctl enable ollama 2>/dev/null || true
-    systemctl start ollama
-    ok "Service Ollama démarré"
-  else
-    info "systemctl non disponible — démarrage en background (utilisateur)..."
-    nohup ollama serve > "$LOG_DIR/ollama.log" 2>&1 &
-    echo $! > "$PID_FILE"
-    ok "Ollama lancé (PID: $(cat "$PID_FILE"))"
-  fi
-
-  wait_for_ollama
-
-  # --- 3. Modèle qwen3:8b ---
-  section "3 — Modèle qwen3:8b"
-  if ollama list 2>/dev/null | grep -q "qwen3:8b"; then
-    warn "qwen3:8b déjà présent"
-  else
-    info "Téléchargement de qwen3:8b (~5.2 Go)..."
-    ollama pull qwen3:8b
-    ok "qwen3:8b téléchargé"
-  fi
-
-  # --- 4. GPU info ---
-  section "4 — GPU"
-  if command -v nvidia-smi &>/dev/null; then
-    ok "GPU NVIDIA : $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)"
-  else
-    warn "nvidia-smi non disponible — mode CPU (fonctionnel mais plus lent)"
-  fi
-
-  # --- 5. Modelfile + Modèle Ollama ---
-  section "5 — Modelfile & Modèle Kali-Lite"
-  setup_modelfile "$MODELFILE_PATH"
-  create_ollama_model "$MODELFILE_PATH"
-
-
-  # --- 8. Alias ---
-  section "8 — Alias kali-lite"
-  setup_alias "$MODELFILE_PATH"
-
-  # --- Résumé ---
-  print_summary "$MODELFILE_PATH"
-}
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── MACOS-ONLY ────────────────────────────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
-
-install_macos() {
-  section "macOS — Installation"
-
-  # macOS : Homebrew refuse root
-  if [[ $EUID -eq 0 ]]; then
-    err "Ne pas lancer en root sur macOS. Utilisez : bash <(curl -fsSL ...)"
-  fi
-
-  local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
-  local LOG_DIR="$REAL_HOME/Library/Logs/kalicorp"
-  local PID_FILE="$REAL_HOME/Library/kalicorp/ollama.pid"
-
-  # Permissions minimales (priorité #8) : répertoires 0755, fichiers 0644
-  mkdir -p "$LOG_DIR" "$(dirname "$PID_FILE")" && chmod 0755 "$LOG_DIR" "$(dirname "$PID_FILE")"
-
-  # --- Homebrew check ---
-  section "0 — Homebrew"
-  if ! command -v brew &>/dev/null; then
-    err "Homebrew requis. Installez-le d'abord : https://brew.sh"
-  fi
-  ok "Homebrew : $(brew --version | head -1)"
-
-  # --- 1. Ollama ---
-  section "1 — Ollama"
-  if command -v ollama &>/dev/null; then
-    warn "Ollama déjà installé : $(ollama --version)"
-  else
-    info "Installation d'Ollama via Homebrew..."
-    brew install ollama
-    ok "Ollama installé"
-  fi
-
-  # --- 2. Démarrage daemon Ollama ---
-  section "2 — Daemon Ollama"
-  if brew services list 2>/dev/null | grep -q "ollama.*started"; then
-    warn "Service Ollama déjà actif (brew services)"
-  else
-    info "Démarrage d'Ollama..."
-    brew services start ollama 2>/dev/null \
-      || (nohup ollama serve > "$LOG_DIR/ollama.log" 2>&1 & echo $! > "$PID_FILE"; ok "Ollama lancé en bg")
-  fi
-
-  wait_for_ollama
-
-  # --- 3. Modèle qwen3:8b ---
-  section "3 — Modèle qwen3:8b"
-  if ollama list 2>/dev/null | grep -q "qwen3:8b"; then
-    warn "qwen3:8b déjà présent"
-  else
-    info "Téléchargement de qwen3:8b (~5.2 Go)..."
-    ollama pull qwen3:8b
-    ok "qwen3:8b téléchargé"
-  fi
-
-  # --- 4. GPU info ---
-  section "4 — GPU"
-  local gpu_info
-  gpu_info=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs)
-  if [[ -n "$gpu_info" ]]; then
-    ok "GPU détecté : $gpu_info"
-  else
-    warn "GPU non détecté — Ollama utilisera Metal/CPU"
-  fi
-
-  # --- 5. Node.js ---
-  section "5 — Node.js"
-  if command -v node &>/dev/null; then
-    warn "Node.js déjà installé : $(node --version)"
-  else
-    info "Installation de Node.js via Homebrew..."
-    brew install node
-    ok "Node.js installé : $(node --version)"
-  fi
-
-  # --- 6. Modelfile + Modèle Ollama ---
-  section "6 — Modelfile & Modèle Kali-Lite"
-  setup_modelfile "$MODELFILE_PATH"
-  create_ollama_model "$MODELFILE_PATH"
-
-
-  # --- 9. Alias ---
-  section "9 — Alias kali-lite"
-  setup_alias "$MODELFILE_PATH"
-
-  # --- Résumé ---
-  print_summary "$MODELFILE_PATH"
-}
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── DRY-RUN MODE ─────────────────────────────────────────────────────────────
-
+# ═══════════════════════════════════════════════════════════════
+# DRY-RUN MODE — no writes
+# ═══════════════════════════════════════════════════════════════
 dry_run() {
   section "DRY-RUN — Simulation (aucune modification)"
   echo ""
-  info "OS détecté : $OS_TYPE"
+  info "OS détecté       : $([ "$IS_LINUX" -eq 1 ] && echo 'Linux' || echo 'macOS')"
   info "Utilisateur réel : $REAL_USER ($REAL_HOME)"
-  info "Shell RC : $SHELL_RC"
+  info "Shell RC         : $SHELL_RC"
 
-  local ollama_status gpu_status node_status brew_status
-  if command -v ollama &>/dev/null; then
-    ollama_status="déjà installé ($(ollama --version 2>/dev/null))"
+  if [[ $IS_LINUX -eq 1 ]]; then
+    info "[1] Ollama       → $(command -v ollama &>/dev/null && echo 'déjà installé' || echo 'installateur officiel ollama.com sera téléchargé puis exécuté')"
+    info "[2] Daemon       → systemd ou démarrage manuel contrôlé"
+    info "[3] Modèle       → qwen3:8b (~5.2 Go) sera téléchargé si absent"
+    info "[4] Modelfile    → /etc/kalicorp/Modelfile.kali-lite"
+    info "[5] Modèle local → kali-lite:latest sera créé/mis à jour"
+    info "[6] Alias        → kali-lite sera injecté dans $SHELL_RC"
   else
-    ollama_status="sera téléchargé via curl (Linux) / brew install (macOS)"
-  fi
-
-  gpu_status=$(command -v nvidia-smi &>/dev/null && echo 'NVIDIA détecté' || echo 'CPU mode')
-
-  if [[ "$OS_TYPE" == "linux" ]]; then
-    local MODELFILE_PATH="/etc/kalicorp/Modelfile.kali-lite"
-    info "[1] Ollama → $ollama_status"
-    info "[2] Daemon Ollama → systemd ou nohup (PID: /var/run/kalicorp-ollama.pid)"
-    info "[3] Modèle qwen3:8b (~5.2 Go) → sera pull"
-    info "[4] GPU → $gpu_status"
-    info "[5] Node.js → $node_status ($brew_status)"
-    info "[6] Modelfile → $MODELFILE_PATH (création)"
-    info "[6] Alias kali-lite → injecté dans $SHELL_RC"
-  else
-    local MODELFILE_PATH="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
-    gpu_status=$(system_profiler SPDisplaysDataType 2>/dev/null | grep "Chipset Model" | head -1 | awk -F: '{print $2}' | xargs || echo 'non détecté (Metal/CPU)')
-    info "[4] GPU → ${gpu_status:-non détecté}"
-
-    node_status=$(command -v npm &>/dev/null && echo 'déjà installé' || echo 'sera brew install via Homebrew')
-    if command -v brew &>/dev/null; then
-      brew_status="Homebrew disponible"
-    else
-      brew_status="⚠️ Homebrew requis mais non détecté — installation manuelle nécessaire"
-    fi
-
-    info "[1] Ollama → $ollama_status"
-    info "[2] Daemon Ollama → brew services ou nohup (PID: $REAL_HOME/Library/kalicorp/ollama.pid)"
-    info "[3] Modèle qwen3.5:9b (~6.5 Go) → sera pull"
-    info "[4] GPU → ${gpu_status:-non détecté}"
-    info "[5] Node.js → $node_status ($brew_status)"
-    info "[6] Modelfile → $MODELFILE_PATH (création)"
-    info "[7] Alias kali-lite-v2 → injecté dans $SHELL_RC"
+    info "[1] Ollama       → $(command -v ollama &>/dev/null && echo 'déjà installé' || echo 'sera installé via Homebrew')"
+    info "[2] Daemon       → brew services ou démarrage manuel contrôlé"
+    info "[3] Modèle       → qwen3:8b (~5.2 Go) sera téléchargé si absent"
+    info "[4] Modelfile    → $REAL_HOME/.kalicorp/Modelfile.kali-lite"
+    info "[5] Modèle local → kali-lite:latest sera créé/mis à jour"
+    info "[6] Alias        → kali-lite sera injecté dans $SHELL_RC"
   fi
 
   echo ""
   ok "DRY-RUN terminé — aucune modification effectuée."
-  exit 0
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ── UNINSTALL MODE ────────────────────────────────────────────────────────────
-
+# ═══════════════════════════════════════════════════════════════
+# UNINSTALL MODE
+# ═══════════════════════════════════════════════════════════════
 uninstall() {
   section "UNINSTALL — Désinstallation Kali-Lite"
 
-  # Confirmation interactive obligatoire (priorité : sécurité)
-  read -r -p "⚠️ Supprimer tous les artefacts Kali-Lite ? (o/N) " confirm || exit 0
-  if [[ "$confirm" != [Oo] ]]; then
-    warn "Désinstallation annulée."
-    exit 0
-  fi
+  read -r -p "⚠️ Supprimer les artefacts Kali-Lite ? Ollama sera conservé. (o/N) " confirm || exit 0
+  [[ "$confirm" == [Oo] ]] || { warn "Désinstallation annulée."; return 0; }
 
-  # --- Nettoyage des alias dans le shell RC ---
-  info "Suppression des blocs d'alias de $SHELL_RC..."
-  if grep -q "# kali-lite alias" "$SHELL_RC" 2>/dev/null; then
-    sed -i '/# kali-lite alias/,/# end kali-lite alias/d' "$SHELL_RC"
-    ok "Bloc 'kali-lite alias' supprimé"
-  fi
-  if grep -q "# kali-lite-hardcore" "$SHELL_RC" 2>/dev/null; then
-    sed -i '/# kali-lite-hardcore/,/# end kali-lite-hardcore alias/d' "$SHELL_RC"
-    ok "Bloc 'kali-lite-hardcore' supprimé"
-  fi
+  info "Removing Kali-Lite shell alias..."
+  cleanup_shell_rc
 
-  # --- Suppression du modèle Ollama ---
-  if ollama list 2>/dev/null | grep -q "kali-lite"; then
-    info "Suppression du modèle kali-lite d'Ollama..."
-    ollama rm kali-lite 2>/dev/null || true
-    ok "Modèle Kali-Lite supprimé"
-  fi
-
-  # --- Suppression des fichiers de configuration (Linux) ---
-  if [[ "$OS_TYPE" == "linux" ]]; then
-    path="/etc/kalicorp/Modelfile.kali-lite"
-    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
+  if command -v ollama &>/dev/null && ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q '^kali-lite:'; then
+    info "Removing model tag kali-lite from Ollama..."
+    ollama rm kali-lite 2>/dev/null || warn "Unable to remove kali-lite from Ollama"
   else
-    path="$REAL_HOME/.kalicorp/Modelfile.kali-lite"
-    [[ -f "$path" ]] && rm -f "$path" && ok "Supprimé : $path" || info "Introuvé (déjà supprimé) : $path"
-
+    info "Model kali-lite not found"
   fi
 
-  # --- Nettoyage macOS — artefacts spécifiques ~/Library/ ---
-  if [[ "$OS_TYPE" == "macos" ]]; then
-    for item in \
-      "$REAL_HOME/Library/Logs/kalicorp" \
-      "$REAL_HOME/Library/kalicorp"; do
-      [[ -d "$item" ]] && rm -rf "$item" && ok "Supprimé : $item" || info "Introuvé (déjà supprimé) : $item"
-    done
-
-    # Nettoyage Homebrew service si installé via brew
-    if command -v brew &>/dev/null; then
-      brew services stop kali-lite 2>/dev/null || true
-      brew uninstall --cask kali-lite 2>/dev/null || true
-    fi
+  if [[ $IS_LINUX -eq 1 ]]; then
+    local path="/etc/kalicorp/Modelfile.kali-lite"
+    [[ -f "$path" ]] && rm -f -- "$path" && ok "Removed: $path" || info "Not found: $path"
+    rmdir /etc/kalicorp 2>/dev/null || true
+  else
+    local path="${REAL_HOME}/.kalicorp/Modelfile.kali-lite"
+    [[ -f "$path" ]] && rm -f -- "$path" && ok "Removed: $path" || info "Not found: $path"
+    rmdir "${REAL_HOME}/.kalicorp" 2>/dev/null || true
   fi
-
 
   echo ""
-  ok "Désinstallation terminée. Exécutez 'source $SHELL_RC' pour recharger le shell."
+  ok "Kali-Lite removed. Ollama and other models were intentionally preserved."
+  info "Reload the shell with: source \"$SHELL_RC\""
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ── MAIN ──────────────────────────────────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
-
-echo "========================================"
-echo " Kalicorp Hardening — Kali-Lite"
-echo " GPL-2.0 | Inférence locale | Zéro tracking Kalicorp"
-echo " Linux + macOS"
-echo "========================================"
-echo ""
-
-# ── Mode spécial : --dry-run ou --uninstall ───────────────────────
-if [[ "${1:-}" == "--dry-run" ]]; then
-  detect_os
-  detect_real_user
-  dry_run
-fi
-
-if [[ "${1:-}" == "--uninstall" ]]; then
-  detect_os
-  detect_real_user
-  uninstall
-fi
-
-# ── Mode normal : installation complète ───────────────────────────
-detect_os
-detect_real_user
-check_common_prereqs
-
-case "$OS_TYPE" in
-  linux)  install_linux  ;;
-  macos)  install_macos  ;;
+# ═══════════════════════════════════════════════════════════════
+# MAIN DISPATCHER
+# ═══════════════════════════════════════════════════════════════
+case "$MODE" in
+  --dry-run)
+    dry_run
+    exit 0
+    ;;
+  --uninstall)
+    uninstall
+    exit 0
+    ;;
 esac
+
+if [[ $IS_LINUX -eq 1 ]]; then
+  install_linux
+else
+  install_macos
+fi
+
+setup_modelfile
+setup_model
+cleanup_shell_rc
+setup_alias
+print_summary
