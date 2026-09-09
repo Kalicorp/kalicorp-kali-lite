@@ -21,19 +21,19 @@
 **Kali-Lite** est une famille d'**Animas IA locales conçues par Kalicorp** pour fonctionner sur du matériel accessible, sans dépendre d'un service d'inférence cloud Kalicorp.
 
 L'inférence s'effectue localement via **Ollama** une fois le runtime et le modèle installés.  
-**Kali-Lite n'ajoute aucune télémétrie ni mécanisme de tracking.**
+**Kali-Lite n'ajoute aucune télémétrie ni mécanisme de tracking utilisateur.**
 
 Le projet ne cherche pas à masquer les limites physiques de l'IA locale. Si une machine chauffe, ralentit ou manque de mémoire, cette contrainte fait partie du système réel : CPU, GPU, RAM, VRAM et stockage restent sous le contrôle de l'opérateur.
 
 Kali-Lite privilégie donc une approche simple :
 
-> **le modèle travaille pour l'utilisateur, sur une infrastructure que l'utilisateur maîtrise.**
+> **Le modèle travaille pour l'utilisateur, sur une infrastructure que l'utilisateur maîtrise.**
 
 La famille repose sur quatre couches séparables :
 
 1. **modèle de base** ;
 2. **doctrine Kali-Lite** ;
-3. **spécialité éventuelle** ;
+3. **spécialité optionnelle** ;
 4. **harnais d'exécution**.
 
 Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou de faire évoluer le modèle de base sans devoir reconstruire toute l'architecture.
@@ -45,7 +45,7 @@ Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou 
 | **Kali-Lite** | Qwen3 8B | ~8 Go | ❌ | Chat, code, assistance système | ~5,2 Go |
 | **Kali-Lite v2** | Qwen3.5 9B Vision | ~10 Go | ✅ | Images, chat, code | ~6,8 Go |
 
-> Les besoins réels dépendent notamment de la quantification, du contexte utilisé, du runtime et de la mémoire disponible.
+> Les besoins réels dépendent notamment de la quantification, du contexte utilisé, du runtime, du système d'exploitation et de la mémoire disponible.
 
 ---
 
@@ -55,7 +55,7 @@ Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou 
 
 Ne lance pas directement un script récupéré sur Internet.
 
-Télécharge-le, vérifie son empreinte SHA-256, lis-le, puis exécute-le.
+Télécharge-le, vérifie son empreinte SHA-256, lis-le, effectue un `--dry-run`, puis exécute-le.
 
 ### Kali-Lite — sans vision
 
@@ -125,11 +125,25 @@ bash auto-install-kali-lite-v2-vision.sh
 
 Après installation :
 
+### Kali-Lite
+
 ```bash
 kali-lite
 ```
 
-ou, selon la variante :
+ou directement :
+
+```bash
+ollama run kali-lite
+```
+
+### Kali-Lite v2
+
+```bash
+kali-lite-v2
+```
+
+ou directement :
 
 ```bash
 ollama run kali-lite-v2
@@ -148,6 +162,18 @@ ollama run kali-lite-v2
 - **Linux et macOS** — prise en charge des principaux environnements locaux ciblés par le projet.
 - **Frugalité** — Kali-Lite vise des machines très éloignées des infrastructures IA de datacenter.
 - **Maîtrise des données** — l'approche locale peut faciliter certaines stratégies de gouvernance, de confidentialité et de souveraineté.
+
+<p align="center">
+  <img
+    src="assets/kali-lite-overview.webp"
+    alt="Kali-Lite — IA locale, frugale et visuelle par Kalicorp"
+    width="100%"
+  >
+</p>
+
+<p align="center">
+  <em>Visuel de présentation — les spécifications techniques de référence sont celles de ce README et de la Model Card.</em>
+</p>
 
 ### RGPD et AI Act
 
@@ -179,15 +205,17 @@ La conformité dépend notamment :
 
 **Kali-Lite**
 
-- GPU NVIDIA : environ **8 Go de VRAM**
-- RAM système : **16 Go minimum conseillé**
+- GPU NVIDIA : environ **8 Go de VRAM** ;
+- RAM système : **16 Go minimum conseillé**.
 
 **Kali-Lite v2**
 
-- GPU : environ **10 Go de mémoire disponible**
-- RAM système : **32 Go recommandé**
+- GPU : environ **10 Go de mémoire disponible** ;
+- RAM système : **32 Go recommandé**.
 
 Sur Apple Silicon, la mémoire est unifiée : la notion de VRAM dédiée ne s'applique donc pas exactement comme sur un GPU NVIDIA.
+
+Une exécution CPU reste possible selon le modèle et la mémoire disponible, mais sera généralement plus lente.
 
 ---
 
@@ -213,8 +241,9 @@ Sur Apple Silicon, la mémoire est unifiée : la notion de VRAM dédiée ne s'ap
 - ❌ un outil conçu spécifiquement pour l'attaque offensive ;
 - ❌ une garantie d'absence de réseau de toutes les dépendances tierces.
 
-Kali-Lite utilise notamment des composants et modèles tiers tels qu'Ollama et Qwen.  
-Le projet cherche à les assembler de façon **locale, inspectable et remplaçable**, plutôt qu'à prétendre qu'ils n'existent pas.
+Kali-Lite utilise notamment des composants et modèles tiers tels qu'**Ollama** et **Qwen**.
+
+Le projet cherche à les assembler de façon **locale, inspectable et remplaçable**, plutôt qu'à prétendre qu'aucune dépendance n'existe.
 
 ---
 
@@ -241,6 +270,22 @@ Cette architecture permet de faire évoluer une couche sans rendre tout le syst�
 
 **Kali-Lite n'est donc pas seulement un poids de modèle : c'est une composition documentée et reproductible.**
 
+### Raisonnement et capacité d'action
+
+La capacité d'un modèle à comprendre une tâche et sa capacité à réellement agir sont deux choses différentes :
+
+```text
+Comprendre une action
+        ≠
+Avoir l'outil
+        ≠
+Avoir la permission
+        ≠
+Avoir exécuté l'action
+```
+
+Kali-Lite est conçue pour distinguer ces états et ne pas présenter une action comme exécutée lorsqu'aucune preuve d'exécution n'est disponible.
+
 ---
 
 ## 🔐 Sécurité
@@ -254,6 +299,15 @@ Les empreintes SHA-256 actuellement publiées sont disponibles dans :
 Pour signaler une vulnérabilité ou consulter la politique de divulgation responsable :
 
 [`SECURITY.md`](SECURITY.md)
+
+Quelques principes :
+
+- télécharger avant d'exécuter ;
+- vérifier l'empreinte SHA-256 ;
+- lire le script ;
+- utiliser `--dry-run` lorsque disponible ;
+- appliquer le principe du moindre privilège ;
+- ne jamais placer de secret ou de clé API directement dans un prompt ou un fichier versionné.
 
 ---
 
@@ -279,6 +333,8 @@ Pour signaler une vulnérabilité ou consulter la politique de divulgation respo
 - [x] Kali-Lite v2 — modèle Vision
 - [x] GitHub Actions — tests automatisés des installateurs
 - [x] Organisation GitHub Kalicorp
+- [x] Documentation de sécurité et Model Card
+- [x] Installation Linux / macOS avec vérification SHA-256
 - [ ] Support Windows / WSL2
 - [ ] Quantifications supplémentaires
 - [ ] Élargissement des modèles de base interchangeables
@@ -291,6 +347,8 @@ Pour signaler une vulnérabilité ou consulter la politique de divulgation respo
 Kali-Lite est distribué sous **GNU General Public License v2.0 only (`GPL-2.0-only`)**.
 
 Voir [`LICENSE`](LICENSE).
+
+Les modèles de base et dépendances tierces restent soumis à leurs propres licences.
 
 Copyright © 2026 Kalicorp.
 
