@@ -16,7 +16,7 @@ Kalicorp prend les vulnérabilités de Kali-Lite au sérieux et encourage une di
 
 ### Comment signaler
 
-- **Email** : security@kalicorp.fr
+- **Email** : kalicorp@proton.me
 - **Sujet recommandé** : `[Kali-Lite] [SECURITY] <titre court>`
 - **Informations utiles** :
   - description de la vulnérabilité ;
@@ -94,10 +94,9 @@ Exemples de dépendances tierces possibles :
 
 - Ollama ;
 - Qwen et autres modèles de base ;
-- Homebrew ;
-- Node.js / NodeSource ;
+- Homebrew sur macOS ;
 - composants système ;
-- runtimes ou outils ajoutés par l'opérateur.
+- runtimes ou outils ajoutés volontairement par l'opérateur.
 
 Kali-Lite ne contrôle pas le cycle de publication ni les politiques de sécurité de ces projets tiers.
 
@@ -153,6 +152,8 @@ Avoir exécuté l'action
 
 Une action ne doit être présentée comme réussie que lorsqu'une preuve suffisante d'exécution est disponible.
 
+La présence d'un terminal, d'une API, d'un MCP ou d'un autre outil dans le harnais ne constitue pas à elle seule une autorisation.
+
 ### 4. Dépendances identifiées
 
 Les installateurs peuvent télécharger ou appeler des composants tiers nécessaires au fonctionnement du système.
@@ -160,14 +161,15 @@ Les installateurs peuvent télécharger ou appeler des composants tiers nécessa
 Selon la plateforme et la version utilisée, cela peut inclure notamment :
 
 - Ollama ;
-- Homebrew ;
-- Node.js / NodeSource ;
+- Homebrew sur macOS ;
 - modèles Qwen ;
 - dépendances système.
 
+D'autres runtimes ou outils peuvent être ajoutés volontairement par l'opérateur au harnais d'exécution.
+
 Le script Kali-Lite lui-même peut être téléchargé, inspecté et vérifié avant exécution.
 
-Les composants tiers restent soumis à leurs propres mécanismes de distribution et de sécurité.
+Les composants tiers restent soumis à leurs propres licences, mécanismes de distribution et politiques de sécurité.
 
 ### 5. Transparence du modèle
 
@@ -176,6 +178,8 @@ La provenance des modèles de base est documentée dans :
 [`MODEL-CARD.md`](MODEL-CARD.md)
 
 Kali-Lite ne prétend pas que les modèles Qwen ou autres modèles tiers ont été entraînés intégralement par Kalicorp.
+
+Le modèle de base est considéré comme une composante identifiable et remplaçable de l'architecture.
 
 ### 6. Principe du moindre privilège
 
@@ -189,6 +193,8 @@ Il est déconseillé de fournir à une Anima :
 - un secret directement inscrit dans un prompt ;
 - des permissions d'écriture inutiles ;
 - un accès à des données hors de son périmètre fonctionnel.
+
+Installer certains composants avec des privilèges système ne signifie pas que le modèle ou l'Anima doivent ensuite disposer de ces privilèges.
 
 ---
 
@@ -217,6 +223,8 @@ less auto-install-kali-lite-v1-novision.sh
 bash auto-install-kali-lite-v1-novision.sh --dry-run
 ```
 
+L'installation réelle peut nécessiter `sudo` selon les opérations système effectuées.
+
 ### macOS
 
 macOS fournit généralement `shasum` plutôt que `sha256sum` :
@@ -227,6 +235,8 @@ shasum -a 256 auto-install-kali-lite-v1-novision.sh
 ```
 
 Compare ensuite manuellement l'empreinte obtenue avec celle publiée dans `SHA256SUMS`.
+
+L'installateur macOS ne doit pas être lancé avec `sudo` lorsque Homebrew est utilisé.
 
 ---
 
@@ -249,7 +259,7 @@ La méthode recommandée consiste à télécharger le fichier avant de l'exécut
 
 Certaines dépendances tierces peuvent toutefois proposer leurs propres installateurs distants.
 
-Leur intégrité et leur politique de distribution relèvent des projets concernés.
+Le téléchargement d'un script tiers dans un fichier avant son exécution améliore l'inspectabilité, mais ne constitue pas à lui seul une garantie cryptographique de provenance ou d'intégrité.
 
 Pour un environnement sensible, il est recommandé de :
 
@@ -257,7 +267,42 @@ Pour un environnement sensible, il est recommandé de :
 - conserver localement les artefacts ;
 - vérifier les signatures ou empreintes lorsqu'elles existent ;
 - filtrer les flux réseau ;
-- auditer les dépendances avant déploiement.
+- auditer les dépendances avant déploiement ;
+- utiliser un miroir interne lorsque cela est pertinent.
+
+---
+
+## Chaîne d'approvisionnement
+
+Les installateurs Kali-Lite publiés disposent d'empreintes dans :
+
+[`SHA256SUMS`](SHA256SUMS)
+
+Une modification d'un installateur doit entraîner le recalcul de son empreinte **après la dernière modification du fichier**.
+
+La procédure recommandée reste :
+
+```text
+Télécharger
+    ↓
+Vérifier
+    ↓
+Inspecter
+    ↓
+Dry-run
+    ↓
+Exécuter
+```
+
+Les empreintes Kali-Lite ne couvrent pas automatiquement :
+
+- Ollama ;
+- les modèles Qwen ;
+- Homebrew ;
+- les composants système ;
+- les outils ajoutés par l'opérateur.
+
+Ces dépendances disposent de leurs propres chaînes de distribution.
 
 ---
 
@@ -280,7 +325,10 @@ Les secrets ne devraient pas être écrits :
 - dans un Modelfile ;
 - dans un prompt versionné ;
 - dans un dépôt Git ;
-- dans un journal partagé.
+- dans un journal partagé ;
+- dans une Issue ou Pull Request publique.
+
+Les logs et captures d'écran doivent être relus et anonymisés avant publication.
 
 ---
 
@@ -298,13 +346,39 @@ Si une mémoire, une base vectorielle, un historique ou un journal de projet est
 - les procédures de suppression ;
 - les éventuels mécanismes de chiffrement.
 
+La mémoire de continuité est externe aux poids du modèle.
+
+Une Anima ne doit pas prétendre se souvenir d'une information qui ne lui a pas été fournie par le contexte ou un mécanisme de mémoire réellement disponible.
+
 L'exécution locale améliore la maîtrise de l'infrastructure, mais ne remplace pas une politique de sécurité des données.
+
+---
+
+## Tests et CI
+
+Le dépôt utilise des contrôles automatisés pour limiter certaines régressions.
+
+Ils couvrent notamment :
+
+- syntaxe Bash ;
+- ShellCheck ;
+- structure du dépôt ;
+- invariants des installateurs ;
+- fidélité des PID Ollama ;
+- absence d'effets de bord du `--dry-run` ;
+- régressions liées aux secrets ;
+- empreintes SHA-256 publiées ;
+- présence de certains patterns de sécurité interdits.
+
+Une CI réussie ne constitue pas une preuve de sécurité absolue.
+
+Elle démontre uniquement que les invariants effectivement testés ont passé les contrôles définis par le projet.
 
 ---
 
 ## Security Updates
 
-Les correctifs peuvent être publiés par commits, pull requests ou releases GitHub selon la nature du changement.
+Les correctifs peuvent être publiés par commits, Pull Requests ou releases GitHub selon la nature du changement.
 
 Les utilisateurs sont invités à :
 
@@ -336,6 +410,8 @@ Kali-Lite peut notamment :
 - proposer une action qui nécessite davantage de privilèges qu'attendu.
 
 Pour les opérations sensibles, une validation humaine reste nécessaire avant exécution.
+
+Une réponse générée par le modèle ne constitue pas une preuve qu'une action a réellement été exécutée.
 
 ---
 
@@ -371,7 +447,7 @@ Les dépendances et modèles tiers restent soumis à leurs propres licences.
 
 Pour toute question ou vulnérabilité concernant directement Kali-Lite :
 
-**security@kalicorp.fr**
+**kalicorp@proton.me**
 
 ---
 
