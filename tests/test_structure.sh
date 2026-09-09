@@ -325,11 +325,11 @@ check "README: badges shields.io" \
 check "README: GPL-2.0-only" \
   grep -q 'GPL-2.0-only' README.md
 
-check "README: V1 qwen3:8b" \
-  grep -q 'qwen3:8b' README.md
+check "README: V1 Qwen3 8B" \
+  grep -q 'Qwen3 8B' README.md
 
-check "README: V2 qwen3.5" \
-  grep -q 'qwen3.5' README.md
+check "README: V2 Qwen3.5 9B" \
+  grep -q 'Qwen3.5 9B' README.md
 
 check "README: vision" \
   grep -qi 'vision' README.md
