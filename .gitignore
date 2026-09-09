@@ -17,33 +17,41 @@ Thumbs.db
 *.log
 ollama.log
 
-# Ollama local models (inefficace — ~ est étendu par le shell, pas par git)
-# ~/.ollama/models/  → utiliser : ollama list && ollama rm <model> pour nettoyer
-
-# Environment
+# Environment files
 .env
+.env.*
 !.env.example
 !.env.template
-.env.local
 
-# Secrets & Keys (tous les formats)
+# Secrets & private keys
 *.pem
 *.key
-*.crt
 *.p12
-.pgp
-.gpg
+*.pfx
+*.keystore
+*.jks
+
+# Certificates
+*.crt
+*.cert
+
+# PGP / GPG
+*.pgp
+*.gpg
+
+# Credentials & secret files
 credentials*
 .secrets
 secret*
 secrets.*
-*.keystore
-*.jks
 
-# Git secrets scan artifacts
+# Git secret scan artifacts
 gitleaks-report.json
 trufflehog-report.json
 
-# Temporary
+# Temporary files
 tmp/
 temp/
+
+# Local Ollama data
+.ollama/models/
