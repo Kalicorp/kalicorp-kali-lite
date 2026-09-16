@@ -3,7 +3,7 @@ language:
 - fr
 - en
 license: other
-license_name: Mixed - GPL-2.0-only Kalicorp artifacts / Apache-2.0 upstream model
+license_name: mixed-gpl-2.0-only-apache-2.0
 tags:
 - qwen3.5
 - vision
