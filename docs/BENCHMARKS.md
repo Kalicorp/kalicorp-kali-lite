@@ -30,3 +30,34 @@ bash scripts/kali-lite-quant.sh --dry-run mistral-7b q4
 # après téléchargement volontaire et création du profil :
 python3 scripts/bench_ollama.py --model kali-lite-mistral-7b-q4 --output bench.json
 ```
+
+
+## Gemma 4 : diagnostic du mode de raisonnement (14 octobre 2026)
+
+Lors des premiers tests RTX 4090, Gemma 4 E2B Q4 a renvoyé une réponse vide avec le banc initial : `num_predict=80` et option `think` non précisée. Vérification par l'opérateur sur l'instance Ollama locale :
+
+- Modèle amont, `think=false`, `num_predict=256` : `Paris` en 2 tokens.
+- Profil Kali-Lite, `think=false`, `num_predict=256` : `Paris` en 2 tokens.
+- Profil Kali-Lite, `think=true`, `num_predict=256` : `Paris` en 196 tokens, dont une phase de raisonnement.
+
+**Conclusion prudente :** les poids et le profil répondent. Le budget initial de 80 tokens *pourrait* avoir été épuisé par le raisonnement implicite ; l'option implicite n'a pas été tracée lors de l'échec initial, donc ce mécanisme n'est pas démontré rétroactivement.
+
+Le banc définit désormais `"think": false` explicitement pour les tests comparatifs. Il accepte aussi `--think` et un budget augmenté, en inscrivant le mode dans le JSON ; il **ne stocke pas** le contenu du raisonnement, seulement sa longueur.
+
+```bash
+# Mettre à jour la branche expérimentale et cibler le serveur 4090 isolé
+git pull --ff-only origin bench-validation
+export OLLAMA_HOST=127.0.0.1:11555
+
+# Comparaison sans raisonnement ; très courte, ne remplace pas un benchmark de charge
+python3 scripts/bench_ollama.py --model kali-lite-gemma4-e2b-q4 \
+  --endpoint http://127.0.0.1:11555 --num-ctx 4096 --num-predict 256 \
+  --output gemma4-4090-q4.json
+
+# Test distinct du raisonnement, budget généreux
+python3 scripts/bench_ollama.py --model kali-lite-gemma4-e2b-q4 \
+  --endpoint http://127.0.0.1:11555 --think --num-ctx 4096 --num-predict 512 \
+  --output gemma4-4090-q4-thinking.json
+```
+
+En cas de sortie vide, les résultats précédents restent enregistrés en JSON et le programme se termine avec code non nul pour alerter la CI. Pour mesurer le GPU, relever séparément `ollama ps` et `nvidia-smi -i 0`. La validation multimodale et les longs contextes restent à tester.

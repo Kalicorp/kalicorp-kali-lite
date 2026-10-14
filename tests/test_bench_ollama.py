@@ -38,9 +38,27 @@ class TestBench(unittest.TestCase):
         with patch.object(bench, "post_json", side_effect=replies) as post:
             report = bench.run("synthetic-model", "http://127.0.0.1:11434", 2048, 80, 10)
         self.assertEqual(post.call_count, 3)
+        self.assertTrue(all(call.args[1]["think"] is False for call in post.call_args_list))
+        self.assertEqual(report["think"], False)
         self.assertEqual(report["heuristic_pass_count"], 3)
         self.assertEqual(report["tests"][0]["tokens_per_second"], 1.0)
         self.assertEqual(report["tests"][2]["tokens_per_second"], 3.5)
+
+    def test_think_explicit_and_empty_answer_preserved(self):
+        replies = [
+            {"response": "", "thinking": "Je cherche...", "done_reason": "length",
+             "eval_count": 80, "eval_duration": 1000000000},
+            {"response": "Non, pas d'outil.", "eval_count": 6, "eval_duration": 100000000},
+            {"response": "Impossible sans accès", "eval_count": 5, "eval_duration": 100000000},
+        ]
+        with patch.object(bench, "post_json", side_effect=replies) as post:
+            report = bench.run("gemma4", "http://127.0.0.1:11434", 4096, 512, 10, think=True)
+        self.assertTrue(all(call.args[1]["think"] is True for call in post.call_args_list))
+        self.assertEqual(report["empty_response_count"], 1)
+        self.assertEqual(report["heuristic_pass_count"], 2)
+        self.assertEqual(report["tests"][0]["thinking_chars"], len("Je cherche..."))
+        self.assertEqual(report["tests"][0]["done_reason"], "length")
+        self.assertEqual(report["tests"][0]["response"], "")
 
 
 if __name__ == "__main__":
