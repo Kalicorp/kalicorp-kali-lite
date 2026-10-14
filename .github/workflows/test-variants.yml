@@ -1,0 +1,23 @@
+name: Test variant laboratory
+on:
+  push:
+    paths:
+      - 'variants/**'
+      - 'scripts/kali-lite-variant.sh'
+      - 'tests/test_variants.sh'
+      - '.github/workflows/test-variants.yml'
+  pull_request:
+    paths:
+      - 'variants/**'
+      - 'scripts/kali-lite-variant.sh'
+      - 'tests/test_variants.sh'
+      - '.github/workflows/test-variants.yml'
+permissions:
+  contents: read
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifications hors ligne
+        run: bash tests/test_variants.sh
