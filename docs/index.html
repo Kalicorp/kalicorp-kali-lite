@@ -58,6 +58,8 @@
     pre {border-radius:13px;background:#07121e;color:#d1f3ea;border:1px solid #294055;margin:0;overflow:auto;padding:17px;line-height:1.65;font-size:12px;white-space:pre}
     code {font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
     .step-help {color:var(--muted);font-size:12px;line-height:1.6;margin:10px 0 0}
+    .generate {width:100%;border:none;border-radius:12px;padding:14px 18px;background:linear-gradient(110deg,#67e2cb,#b4edbe);color:#07362e;font-weight:850;font-size:14px;margin-top:17px}
+    .generate:hover {filter:brightness(1.07)}
     .copy {border:1px solid #588e83;background:#1a3b3d;color:#baf9e5;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:800}
     .copy:hover {background:#275651}
     .safety {margin:34px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
@@ -128,6 +130,7 @@
           </select>
           <p class="mini" id="quant-hint">Fixée par les profils stables Qwen. Q4/Q8 disponibles pour les profils du laboratoire.</p>
         </div>
+        <button class="generate" type="submit">Valider et générer mes commandes →</button>
         <div class="notice"><strong>Sécurité d'abord.</strong> Les commandes sont affichées, jamais lancées. Vous choisissez de les exécuter après lecture, contrôle des sources et vérification de votre environnement.</div>
       </form>
       <section class="card output" id="output" aria-live="polite" aria-label="Commandes générées">
@@ -240,6 +243,11 @@
         }
       }
       form.addEventListener("change", render);
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        render();
+        document.getElementById("output").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
       render();
     })();
   </script>
