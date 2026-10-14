@@ -17,8 +17,11 @@ assert_profile() {
     echo "Tokens stop spécifiques à l'amont interdits : $file" >&2
     exit 1
   fi
-  bash scripts/kali-lite-variant.sh --list | grep -Fq "$tag"
-  bash scripts/kali-lite-variant.sh --dry-run "$slug" | grep -Fq "ollama pull $upstream"
+  local list_output dry_output
+  list_output="$(bash scripts/kali-lite-variant.sh --list)"
+  grep -Fq "$tag" <<< "$list_output"
+  dry_output="$(bash scripts/kali-lite-variant.sh --dry-run "$slug")"
+  grep -Fq "ollama pull $upstream" <<< "$dry_output"
 }
 
 assert_profile mistral-7b mistral:7b-instruct kali-lite-mistral-7b
