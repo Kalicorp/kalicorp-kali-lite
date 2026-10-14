@@ -10,7 +10,7 @@ Aucune mesure de VRAM n'est déductible d'un test sur runner CPU. Les trois prom
 ## Ce qui attend un test réel
 
 - WSL2 : valider l'installation/désinstallation sur un hôte Windows avec WSL2 opérationnel, pas seulement Git Bash.
-- GPU Kalicorp : les premiers essais **Q4 Mistral / OLMo** sur la RTX 4090 sont confirmés (voir mesures ci-dessous). Il reste à faire des générations longues, des répétitions, les **Q8** et le benchmark complet **Gemma 4** ; relever systématiquement VRAM avec `nvidia-smi`.
+- GPU Kalicorp : les essais **Q4 Mistral / OLMo / Gemma 4** sur RTX 4090 ont passé chacun 3/3 heuristiques (voir mesures ci-dessous). Il reste à faire des générations longues, des répétitions et les **Q8** ; relever systématiquement VRAM avec `nvidia-smi`.
 - Vision : jeu d'images de test libre de droits pour Gemma 4, résultats interprétés humainement.
 - Confidentialité : tests réseau du harnais complet dans un environnement contrôlé (pas uniquement dans le modèle).
 
@@ -71,10 +71,10 @@ En cas de sortie vide, les résultats précédents restent enregistrés en JSON 
 |---|---|---:|---|---:|
 | `kali-lite-mistral-7b-q4` | 3/3 heuristiques ; GPU 0, 100 % GPU | 30,609 s | 172,02 et 169,81 tok/s | 4 912 MiB |
 | `kali-lite-olmo3-7b-q4` | 3/3 heuristiques ; GPU 0, 100 % GPU | 10,268 s | 167,06 et 169,37 tok/s | 5 612 MiB |
-| `kali-lite-gemma4-e2b-q4` | Inférence confirmée, benchmark initial interrompu sur réponse vide | Non comparable | Non consolidé | Non consolidé |
+| `kali-lite-gemma4-e2b-q4` | **3/3**, think=false, `num_ctx=4096`, `num_predict=256` | 4,256 s | 386,59 et 522,47 tok/s | 3 378 MiB |
 
-**Expérience Gemma 4 :** la réponse vide du premier benchmark ne signifie pas un modèle défaillant. Le modèle amont et la configuration Kalicorp répondent `Paris` avec `think=false` et `num_predict=256` ; avec `think=true`, la même question produit une réponse correcte après 196 tokens au total. Le mécanisme de l'échec initial (budget de 80 tokens sans option `think` explicite) reste une hypothèse, pas une observation directe.
+**Expérience Gemma 4 :** la réponse vide du premier benchmark ne signifie pas un modèle défaillant. Le modèle amont et la configuration Kalicorp répondent `Paris` avec `think=false` et `num_predict=256` ; avec `think=true`, la même question produit une réponse correcte après 196 tokens au total. Le mécanisme de l'échec initial (budget de 80 tokens sans option `think` explicite) reste une hypothèse, pas une observation directe. **Correction exécutée sur la RTX 4090 :** le banc versionné avec `think=false`, `num_ctx=4096` et `num_predict=256` renvoie 3/3, zéro réponse vide, avec débits successifs de 135,37, 386,59 et 522,47 tok/s. Les chiffres correspondent à de très courts textes et ne permettent pas d'établir la performance sur des tâches longues.
 
 **À ne pas conclure :** supériorité d'un modèle à partir de deux réponses très courtes ; débit de génération longue ; consommation de puissance moyenne ; conformité/souveraineté du harnais ; capacités vision ou support WSL2. Les valeurs de mémoire sont instantanées, et les premiers appels incluent chargement/initialisation.
 
-**Règle de qualification :** ces observations valident le smoke test GPU Q4 **Mistral et OLMo**, pas la comparaison Q4/Q8 ni une qualification de production. Le benchmark corrigé de Gemma doit encore retourner ses trois résultats pour passer à « 3/3 ».
+**Règle de qualification :** ces observations valident le smoke test GPU Q4 de **Mistral, OLMo et Gemma 4 (3/3 chacun)**, pas la comparaison Q4/Q8, les capacités multimodales ou une qualification de production.
