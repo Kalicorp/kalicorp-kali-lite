@@ -1,0 +1,34 @@
+name: Test install configurator
+
+on:
+  push:
+    paths:
+      - 'docs/index.html'
+      - 'docs/configurator.js'
+      - 'docs/CONFIGURATEUR.md'
+      - 'tests/test_configurator.cjs'
+      - '.github/workflows/test-configurator.yml'
+  pull_request:
+    paths:
+      - 'docs/index.html'
+      - 'docs/configurator.js'
+      - 'docs/CONFIGURATEUR.md'
+      - 'tests/test_configurator.cjs'
+      - '.github/workflows/test-configurator.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-configurator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test des 30 configurations et garde-fous
+        run: node tests/test_configurator.cjs

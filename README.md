@@ -1,18 +1,276 @@
 <div align="center">
 
+![Kali-Lite — une IA locale par Kalicorp](assets/kali-lite-banner.png)
+
 # Kali-Lite
 
-![Kali-Lite Banner](assets/kali-lite-banner.png)
+### L'intelligence artificielle locale, sans dépendance à un service d'inférence.
 
-**IA locale, frugale et maîtrisable — Ollama • Linux • macOS**
+**Choisissez un moteur. Gardez la maîtrise de la machine, des données et du contexte.**
 
-[![Ollama](https://img.shields.io/badge/Ollama-Local-%2312B7F5?style=for-the-badge&logo=ollama)](https://ollama.com)
-[![VRAM](https://img.shields.io/badge/VRAM-8--10%20Go-%2322c55e?style=for-the-badge)](#)
-[![License: GPL-2.0-only](https://img.shields.io/badge/License-GPL--2.0--only-%23f37726?style=for-the-badge)](LICENSE)
-[![Platforms](https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS-%236366f1?style=for-the-badge)](#)
-[![Sovereign](https://img.shields.io/badge/Souverainet%C3%A9-Ma%C3%AEtrisable-%23EA580C?style=for-the-badge)](https://site.kalicorp.fr)
+[![Ollama](https://img.shields.io/badge/Ollama-Local-25bea7?style=for-the-badge&logo=ollama)](https://ollama.com)
+[![Licence](https://img.shields.io/badge/Licence-GPL--2.0--only-eaa46b?style=for-the-badge)](LICENSE)
+[![Systèmes](https://img.shields.io/badge/Linux%20%7C%20macOS-Supportés-425e76?style=for-the-badge)](#-installation)
+[![Windows](https://img.shields.io/badge/Windows%20WSL2-Pilote%20non%20validé-746247?style=for-the-badge)](docs/WINDOWS-WSL2.md)
+
+**[🧭 Composer mon installation](docs/CONFIGURATEUR.md)** · **[⚡ Installation rapide](#installation)** · **[🔌 Hermes Agent CLI](docs/HERMES-AGENT.md)** · **[📊 Résultats GPU](docs/BENCHMARKS.md)** · **[🗺️ Roadmap](#roadmap)**
 
 </div>
+
+> **Kali-Lite, ce n'est pas un modèle unique :** c'est une identité logicielle locale, une doctrine et des profils interchangeables, exécutés sous le contrôle de leur opérateur.
+
+## 🚀 En quelques clics
+
+| Étape | Vous choisissez | Kali-Lite prépare |
+|---|---|---|
+| **1 · Moteur** | Qwen3 8B, Qwen3.5 Vision, Mistral 7B, OLMo 3 7B, Gemma 4 E2B | Profil stable ou laboratoire |
+| **2 · Système** | Linux, macOS ou Windows via WSL2 (pilote) | Commandes adaptées au terminal |
+| **3 · Quantification** | Q4_K_M ou Q8_0 pour les variantes du laboratoire | Pull explicite et tag Ollama distinct |
+
+**[Ouvrir le guide du configurateur →](docs/CONFIGURATEUR.md)** · Page statique locale : aucun compte, aucune télémétrie, aucune commande exécutée par le navigateur. L'hébergement GitHub Pages pourra fournir ensuite une URL directe, après activation.
+
+**Déjà utilisateur d'Hermes Agent CLI ?** [Connecter Kali-Lite à Hermes via Ollama →](docs/HERMES-AGENT.md) — passerelle documentée, tests agentiques 64K et appels d'outils encore en attente. 
+
+### Choisir son moteur directement dans GitHub
+
+Ces menus natifs sont utilisables **sans quitter le README**. Ils proposent des commandes inspectables et prêtes à copier. Pour le choix croisé **moteur × OS × quantification** avec boutons *Copier*, utiliser la [page interactive](docs/CONFIGURATEUR.md).
+
+<details>
+<summary><strong>🟢 Kali-Lite Qwen3 8B — version stable (Linux / macOS)</strong></summary>
+
+**Linux** — vérification SHA-256, simulation, puis installation volontaire :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-qwen"
+cd "$HOME/kali-lite-qwen"
+sha256sum --check SHA256SUMS
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-qwen"
+sudo bash auto-install-kali-lite-v1-novision.sh
+ollama run kali-lite
+```
+
+**macOS** — Homebrew requis, ne pas utiliser `sudo` :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-qwen"
+cd "$HOME/kali-lite-qwen"
+shasum -a 256 -c SHA256SUMS
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-qwen"
+bash auto-install-kali-lite-v1-novision.sh
+ollama run kali-lite
+```
+
+</details>
+
+<details>
+<summary><strong>🟢 Kali-Lite Vision Qwen3.5 9B — version stable (Linux / macOS)</strong></summary>
+
+**Linux** :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-vision"
+cd "$HOME/kali-lite-vision"
+sha256sum --check SHA256SUMS
+bash auto-install-kali-lite-v2-vision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-vision"
+sudo bash auto-install-kali-lite-v2-vision.sh
+ollama run kali-lite-v2
+```
+
+**macOS** — Homebrew requis, sans `sudo` :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-vision"
+cd "$HOME/kali-lite-vision"
+shasum -a 256 -c SHA256SUMS
+bash auto-install-kali-lite-v2-vision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-vision"
+bash auto-install-kali-lite-v2-vision.sh
+ollama run kali-lite-v2
+```
+
+</details>
+
+<details>
+<summary><strong>🧪 Kali-Lite Mistral 7B — expérimental (Q4 / Q8)</strong></summary>
+
+**Linux ou macOS :** Ollama doit être installé et démarré localement. Aucun `sudo` dans les recettes expérimentales.
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-mistral"
+cd "$HOME/kali-lite-mistral"
+```
+
+**Q4_K_M**, plus léger :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run mistral-7b q4
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull mistral:7b-instruct-v0.3-q4_K_M
+bash scripts/kali-lite-quant.sh --create mistral-7b q4
+ollama run kali-lite-mistral-7b-q4
+```
+
+**Q8_0**, plus gourmand en RAM et VRAM :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run mistral-7b q8
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull mistral:7b-instruct-v0.3-q8_0
+bash scripts/kali-lite-quant.sh --create mistral-7b q8
+ollama run kali-lite-mistral-7b-q8
+```
+
+</details>
+
+<details>
+<summary><strong>🧪 Kali-Lite OLMo 3 7B — expérimental (Q4 / Q8)</strong></summary>
+
+**Linux ou macOS :** Ollama doit être installé et démarré localement.
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-olmo"
+cd "$HOME/kali-lite-olmo"
+```
+
+**Q4_K_M** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run olmo3-7b q4
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull olmo-3:7b-instruct-q4_K_M
+bash scripts/kali-lite-quant.sh --create olmo3-7b q4
+ollama run kali-lite-olmo3-7b-q4
+```
+
+**Q8_0** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run olmo3-7b q8
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull olmo-3:7b-instruct-q8_0
+bash scripts/kali-lite-quant.sh --create olmo3-7b q8
+ollama run kali-lite-olmo3-7b-q8
+```
+
+</details>
+
+<details>
+<summary><strong>🧪 Kali-Lite Gemma 4 E2B — expérimental, Vision (Q4 / Q8)</strong></summary>
+
+**Linux ou macOS :** Ollama doit être installé et démarré localement. La vision de cette variante reste à qualifier.
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-gemma"
+cd "$HOME/kali-lite-gemma"
+```
+
+**Q4_K_M** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run gemma4-e2b q4
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull gemma4:e2b-it-q4_K_M
+bash scripts/kali-lite-quant.sh --create gemma4-e2b q4
+ollama run kali-lite-gemma4-e2b-q4
+```
+
+**Q8_0** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run gemma4-e2b q8
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull gemma4:e2b-it-q8_0
+bash scripts/kali-lite-quant.sh --create gemma4-e2b q8
+ollama run kali-lite-gemma4-e2b-q8
+```
+
+</details>
+
+<details>
+<summary><strong>🔌 Hermes Agent CLI — utiliser Kali-Lite comme moteur Ollama (pilote)</strong></summary>
+
+Hermes Agent CLI accepte l'API OpenAI-compatible d'Ollama. Pour le connecter à un **modèle Kali-Lite effectivement installé** sur l'instance locale choisie :
+
+```bash
+curl -fsS http://127.0.0.1:11434/v1/models
+hermes model
+```
+
+Dans Hermes, sélectionner **Custom endpoint**, renseigner `http://127.0.0.1:11434/v1` (adapter au port réel) puis le nom exact du modèle.
+
+**⚠️ Prérequis bloquant :** Hermes demande **au moins 64 000 tokens de contexte**. Les Modelfiles Kali-Lite actuellement publiés utilisent généralement 8K/32K, et ne sont **pas qualifiés** tels quels. Ne pas modifier la production et ne pas déclarer 64K côté Hermes sans les avoir effectivement configurés et mesurés dans Ollama.
+
+[**Guide complet Kali-Lite × Hermes Agent CLI →**](docs/HERMES-AGENT.md) · [Documentation officielle Hermes](https://hermes-agent.nousresearch.com/docs/integrations/providers/)
+
+</details>
+
+<details>
+<summary><strong>🪟 Windows — Ubuntu sous WSL2 (pilote non validé)</strong></summary>
+
+Il n'existe **pas d'installateur Windows natif** dans ce dépôt. Pour tester sur un environnement Windows non critique :
+
+**PowerShell administrateur** :
+
+```powershell
+wsl --install -d Ubuntu
+wsl --update
+wsl --list --verbose
+```
+
+Puis, après redémarrage éventuel et vérification de WSL2, ouvrir le terminal **Ubuntu sous WSL2**. Suivre le [guide d'installation WSL2](docs/WINDOWS-WSL2.md), installer un Ollama Linux dans WSL2 selon les recommandations officielles et utiliser l'un des parcours Linux ci-dessus seulement après `--dry-run`. **Aucune qualification WSL2 CPU/GPU n'est encore revendiquée.**
+
+</details>
+
+> **Avant exécution :** les recettes peuvent télécharger plusieurs Go et modifier la machine. Vérifier la provenance, la RAM/VRAM disponible, la licence amont et chaque commande. Le fichier `SHA256SUMS` atteste la cohérence de fichiers dans le dépôt, **pas** une signature d'éditeur.
+
+
 
 ---
 
@@ -47,143 +305,86 @@ Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou 
 
 > Les besoins réels dépendent notamment de la quantification, du contexte utilisé, du runtime, du système d'exploitation et de la mémoire disponible.
 
-### Laboratoire multi-modèles (branche `projet-x` uniquement)
+### Laboratoire multi-modèles (branche `projet-x`)
 
-Les versions Qwen ci-dessus sont les modèles de référence. **Trois nouvelles configurations expérimentales** ont passé les tests automatisés de scripts. Des essais réels Q4 **et Q8** sur RTX 4090 (Ubuntu 26, Ollama 0.40.4 côté serveur) ont confirmé les trois profils sur des prompts synthétiques courts (Mistral, OLMo 3, Gemma 4) :
+| Moteur expérimental | Profil | Vision |
+|---|---|:---:|
+| **Mistral 7B** | `mistral-7b` | Non |
+| **OLMo 3 7B** | `olmo3-7b` | Non |
+| **Gemma 4 E2B** | `gemma4-e2b` | Oui (selon runtime) |
 
-| Profil | Modèle amont | Vision | Installation |
-|---|---|:---:|---|
-| Kali-Lite Mistral 7B | `mistral:7b-instruct` | Non | `bash scripts/kali-lite-variant.sh --dry-run mistral-7b` |
-| Kali-Lite OLMo 3 7B | `olmo-3:7b-instruct` | Non | `bash scripts/kali-lite-variant.sh --dry-run olmo3-7b` |
-| Kali-Lite Gemma 4 E2B | `gemma4:e2b` | Oui (selon runtime) | `bash scripts/kali-lite-variant.sh --dry-run gemma4-e2b` |
+**Campagne RTX 4090 du 14 octobre 2026 : 6 configurations Q4/Q8, 18/18 smoke tests heuristiques réussis.** C'est une validation d'exécution GPU et de premiers comportements, **pas** une certification de performances ni de conformité. Qwen3 et Qwen3.5 restent les profils de référence.
 
-Les quantifications **Q4_K_M et Q8_0** sont aussi disponibles sous forme de recettes distinctes, sans téléchargement implicite : `bash scripts/kali-lite-quant.sh --list`. Voir [le laboratoire](docs/VARIANTS-LAB.md) et [les quantifications](docs/QUANTIZATIONS.md). Ne pas confondre taille disque et VRAM réelle.
+<details>
+<summary><strong>Voir les tests Q4 et Q8 et leurs limites</strong></summary>
 
-#### Vérification terrain RTX 4090 — 14 octobre 2026
+| Variante | Test RTX 4090 | VRAM de processus observée |
+|---|:---:|---:|
+| Mistral 7B Q4 | 3/3 | 4 912 MiB |
+| Mistral 7B Q8 | 3/3 | 8 282 MiB |
+| OLMo 3 7B Q4 | 3/3 | 5 612 MiB |
+| OLMo 3 7B Q8 | 3/3 | 9 580 MiB |
+| Gemma 4 E2B Q4 | 3/3 | 3 378 MiB |
+| Gemma 4 E2B Q8 | 3/3 | 4 122 MiB |
 
-| Profil Q4 | GPU observé | Smoke test | Débit sur deux réponses courtes | Occupation VRAM du processus |
-|---|---|---|---|---|
-| **Mistral 7B** | RTX 4090, 100 % GPU | **3/3** | 172,02 et 169,81 tok/s | ~4 912 MiB |
-| **OLMo 3 7B** | RTX 4090, 100 % GPU | **3/3** | 167,06 et 169,37 tok/s | ~5 612 MiB |
-| **Gemma 4 E2B** | RTX 4090, 100 % GPU | **3/3** (think=false) | 386,59 et 522,47 tok/s | ~3 378 MiB |
+Les premiers Q4 Mistral/OLMo ont été testés avec `num_ctx=2048`, les Q8 avec `4096`. Les tâches étaient courtes. Le premier débit Gemma Q8 (~0,2 tok/s) reste à investiguer.
 
-#### Smoke tests Q8 réels — RTX 4090, 14 octobre 2026
+**[Méthode, métriques et limites de qualification →](docs/BENCHMARKS.md)**
 
-| Profil Q8 | Résultat | Deux derniers débits (réponses courtes) | VRAM du processus |
-|---|---|---|---|
-| **Mistral 7B Q8_0** | **3/3** | 107,08 et 105,70 tok/s | ~8 282 MiB |
-| **OLMo 3 7B Q8_0** | **3/3** | 106,46 et 105,94 tok/s | ~9 580 MiB |
-| **Gemma 4 E2B Q8_0** | **3/3** | 210,85 et 220,79 tok/s | ~4 122 MiB |
+</details>
 
-Les premiers appels Q8 ont duré respectivement 6,174 s, 4,864 s et 13,184 s (chargement compris). **Anomalie Gemma Q8 : 0,2 tok/s pour le premier prompt**, puis débit normal pour les deux suivants ; à diagnostiquer avant classement. Les Q8 ont été testés avec `think=false`, `num_ctx=4096`, `num_predict=256`.
+**[Recettes Q4/Q8](docs/QUANTIZATIONS.md)** · **[Profils disponibles](docs/VARIANTS-LAB.md)**
 
-**Attention à la comparabilité :** les premiers smoke tests Q4 Mistral/OLMo étaient à `num_ctx=2048`, contre `4096` pour les Q8. Ces six succès confirment le fonctionnement GPU, **pas** une comparaison équitable Q4/Q8. Les débits concernent des générations trop courtes pour établir une performance représentative.
-
-Gemma 4 : le benchmark initial a échoué sur une réponse vide avec 80 tokens de budget et un mode de raisonnement implicite. Après correction du banc (`think=false`, `num_ctx=4096`, `num_predict=256`), l'opérateur a obtenu **3/3 heuristiques**, zéro réponse vide, sur la RTX 4090. Débits observés sur trois réponses très courtes : 135,37, 386,59 et 522,47 tok/s ; premier appel : 4,256 s. Les deux derniers débits ne sont **pas** un classement de vitesse des modèles en tâche réelle.
-
-Ces résultats portent sur des **prompts synthétiques très courts**, `num_ctx=2048` pour les premiers benchmarks, sans répétitions suffisantes pour certifier la performance en charge. Les six profils Q4/Q8 ont réussi leur smoke test GPU. Les générations longues, les contextes élevés, la vision Gemma, la comparaison contrôlée Q4/Q8 et WSL2 restent à vérifier. Voir [le protocole et les limites](docs/BENCHMARKS.md).
 
 ---
 
+<a id="installation"></a>
+
 ## ⚡ Installation
 
-### Principe recommandé
+**Un moteur + un système = les commandes adaptées.** Le [configurateur](docs/CONFIGURATEUR.md) les prépare dans le navigateur sans exécution ni collecte de données. Retrouvez aussi le [guide détaillé](INSTALLATION.md).
 
-Ne lance pas directement un script récupéré sur Internet.
+<details open>
+<summary><strong>Exemple : installer Kali-Lite Qwen3 8B sur Linux</strong></summary>
 
-Télécharge-le, vérifie son empreinte SHA-256, lis-le, effectue un `--dry-run`, puis exécute-le.
-
-### Kali-Lite — sans vision
-
-#### Linux
+Commencer par récupérer le dépôt stable, vérifier les empreintes publiées et lancer une simulation :
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
-
-sha256sum --check SHA256SUMS --ignore-missing
-
-less auto-install-kali-lite-v1-novision.sh
-
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite"
+cd "$HOME/kali-lite"
+sha256sum --check SHA256SUMS
 bash auto-install-kali-lite-v1-novision.sh --dry-run
+```
+
+**Après lecture de l'intégralité du script et validation du dry-run seulement :**
+
+```bash
+cd "$HOME/kali-lite"
 sudo bash auto-install-kali-lite-v1-novision.sh
-```
-
-#### macOS
-
-```bash
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v1-novision.sh
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
-
-grep 'auto-install-kali-lite-v1-novision.sh' SHA256SUMS
-shasum -a 256 auto-install-kali-lite-v1-novision.sh
-
-less auto-install-kali-lite-v1-novision.sh
-
-bash auto-install-kali-lite-v1-novision.sh --dry-run
-bash auto-install-kali-lite-v1-novision.sh
-```
-
-Compare l'empreinte affichée par `shasum -a 256` avec celle publiée dans `SHA256SUMS`.
-
-### Kali-Lite v2 — avec vision
-
-#### Linux
-
-```bash
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
-
-sha256sum --check SHA256SUMS --ignore-missing
-
-less auto-install-kali-lite-v2-vision.sh
-
-bash auto-install-kali-lite-v2-vision.sh --dry-run
-sudo bash auto-install-kali-lite-v2-vision.sh
-```
-
-#### macOS
-
-```bash
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/auto-install-kali-lite-v2-vision.sh
-curl -fsSLO https://raw.githubusercontent.com/Kalicorp/kalicorp-kali-lite/main/SHA256SUMS
-
-grep 'auto-install-kali-lite-v2-vision.sh' SHA256SUMS
-shasum -a 256 auto-install-kali-lite-v2-vision.sh
-
-less auto-install-kali-lite-v2-vision.sh
-
-bash auto-install-kali-lite-v2-vision.sh --dry-run
-bash auto-install-kali-lite-v2-vision.sh
-```
-
-> **Temps d'installation indicatif :** 15 à 20 minutes, principalement selon la connexion utilisée pour télécharger le modèle.
-
-Après installation :
-
-### Kali-Lite
-
-```bash
-kali-lite
-```
-
-ou directement :
-
-```bash
 ollama run kali-lite
 ```
 
-### Kali-Lite v2
+Le fichier `SHA256SUMS` n'est pas une signature de l'éditeur ; il ne protège pas contre un dépôt compromis.
+
+</details>
+
+<details>
+<summary><strong>Autres choix : Qwen Vision, Mistral, OLMo, Gemma, macOS et WSL2</strong></summary>
+
+Le [configurateur d'installation](docs/CONFIGURATEUR.md) prend en charge les cinq moteurs et prépare les commandes spécifiques. **Windows** se fait seulement via Ubuntu sous **WSL2**, toujours en phase pilote non certifiée ; il n'existe pas de script d'installation Windows natif.
+
+Pour ouvrir la page localement après avoir récupéré `projet-x` :
 
 ```bash
-kali-lite-v2
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-config"
+cd "$HOME/kali-lite-config"
+python3 -m http.server 8765 --bind 127.0.0.1 --directory docs
 ```
 
-ou directement :
+Ouvrir `http://127.0.0.1:8765` dans un navigateur, puis choisir le modèle et le système. Arrêter ce petit serveur local avec `Ctrl+C`.
 
-```bash
-ollama run kali-lite-v2
-```
+</details>
+
 
 ---
 
@@ -361,12 +562,16 @@ Quelques principes :
 | [docs/VARIANTS-LAB.md](docs/VARIANTS-LAB.md) | Profils Mistral / OLMo / Gemma (expérimental) |
 | [docs/QUANTIZATIONS.md](docs/QUANTIZATIONS.md) | Presets Q4/Q8, tests et limites |
 | [docs/WINDOWS-WSL2.md](docs/WINDOWS-WSL2.md) | Parcours Windows/WSL2 (pilote non validé sur matériel) |
+| [docs/CONFIGURATEUR.md](docs/CONFIGURATEUR.md) | Page d'installation interactive locale et publication statique |
+| [docs/HERMES-AGENT.md](docs/HERMES-AGENT.md) | Connexion Ollama vers Hermes Agent CLI, exigences de contexte 64K et tests d'outils |
 | [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Tests multi-OS, inférence CPU GitHub et mesures GPU RTX 4090 |
 | [SECURITY.md](SECURITY.md) | Sécurité et divulgation responsable |
 | [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des installateurs |
 | [LICENSE](LICENSE) | GNU GPL v2 — GPL-2.0-only |
 
 ---
+
+<a id="roadmap"></a>
 
 ## 🗺️ Roadmap 2026
 
