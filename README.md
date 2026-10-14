@@ -43,7 +43,12 @@ git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite
 cd "$HOME/kali-lite-qwen"
 sha256sum --check SHA256SUMS
 bash auto-install-kali-lite-v1-novision.sh --dry-run
-# Après inspection du script et validation humaine seulement :
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-qwen"
 sudo bash auto-install-kali-lite-v1-novision.sh
 ollama run kali-lite
 ```
@@ -55,7 +60,12 @@ git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite
 cd "$HOME/kali-lite-qwen"
 shasum -a 256 -c SHA256SUMS
 bash auto-install-kali-lite-v1-novision.sh --dry-run
-# Après inspection et validation :
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-qwen"
 bash auto-install-kali-lite-v1-novision.sh
 ollama run kali-lite
 ```
@@ -72,7 +82,12 @@ git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite
 cd "$HOME/kali-lite-vision"
 sha256sum --check SHA256SUMS
 bash auto-install-kali-lite-v2-vision.sh --dry-run
-# Après inspection et validation :
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-vision"
 sudo bash auto-install-kali-lite-v2-vision.sh
 ollama run kali-lite-v2
 ```
@@ -84,7 +99,12 @@ git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite
 cd "$HOME/kali-lite-vision"
 shasum -a 256 -c SHA256SUMS
 bash auto-install-kali-lite-v2-vision.sh --dry-run
-# Après inspection et validation :
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-vision"
 bash auto-install-kali-lite-v2-vision.sh
 ollama run kali-lite-v2
 ```
@@ -104,9 +124,13 @@ cd "$HOME/kali-lite-mistral"
 **Q4_K_M**, plus léger :
 
 ```bash
-ollama pull mistral:7b-instruct-v0.3-q4_K_M
 bash scripts/kali-lite-quant.sh --dry-run mistral-7b q4
-# Après examen du résultat :
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull mistral:7b-instruct-v0.3-q4_K_M
 bash scripts/kali-lite-quant.sh --create mistral-7b q4
 ollama run kali-lite-mistral-7b-q4
 ```
@@ -114,9 +138,13 @@ ollama run kali-lite-mistral-7b-q4
 **Q8_0**, plus gourmand en RAM et VRAM :
 
 ```bash
-ollama pull mistral:7b-instruct-v0.3-q8_0
 bash scripts/kali-lite-quant.sh --dry-run mistral-7b q8
-# Après examen du résultat :
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull mistral:7b-instruct-v0.3-q8_0
 bash scripts/kali-lite-quant.sh --create mistral-7b q8
 ollama run kali-lite-mistral-7b-q8
 ```
@@ -136,9 +164,13 @@ cd "$HOME/kali-lite-olmo"
 **Q4_K_M** :
 
 ```bash
-ollama pull olmo-3:7b-instruct-q4_K_M
 bash scripts/kali-lite-quant.sh --dry-run olmo3-7b q4
-# Après examen du résultat :
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull olmo-3:7b-instruct-q4_K_M
 bash scripts/kali-lite-quant.sh --create olmo3-7b q4
 ollama run kali-lite-olmo3-7b-q4
 ```
@@ -146,9 +178,13 @@ ollama run kali-lite-olmo3-7b-q4
 **Q8_0** :
 
 ```bash
-ollama pull olmo-3:7b-instruct-q8_0
 bash scripts/kali-lite-quant.sh --dry-run olmo3-7b q8
-# Après examen du résultat :
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull olmo-3:7b-instruct-q8_0
 bash scripts/kali-lite-quant.sh --create olmo3-7b q8
 ollama run kali-lite-olmo3-7b-q8
 ```
@@ -168,9 +204,13 @@ cd "$HOME/kali-lite-gemma"
 **Q4_K_M** :
 
 ```bash
-ollama pull gemma4:e2b-it-q4_K_M
 bash scripts/kali-lite-quant.sh --dry-run gemma4-e2b q4
-# Après examen du résultat :
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull gemma4:e2b-it-q4_K_M
 bash scripts/kali-lite-quant.sh --create gemma4-e2b q4
 ollama run kali-lite-gemma4-e2b-q4
 ```
@@ -178,9 +218,13 @@ ollama run kali-lite-gemma4-e2b-q4
 **Q8_0** :
 
 ```bash
-ollama pull gemma4:e2b-it-q8_0
 bash scripts/kali-lite-quant.sh --dry-run gemma4-e2b q8
-# Après examen du résultat :
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull gemma4:e2b-it-q8_0
 bash scripts/kali-lite-quant.sh --create gemma4-e2b q8
 ollama run kali-lite-gemma4-e2b-q8
 ```
