@@ -34,7 +34,7 @@ jobs:
       VARIANT: ${{ inputs.variant || 'mistral-7b' }}
       QUANT: ${{ inputs.quant || 'q4' }}
       OLLAMA_HOST: 127.0.0.1:11434
-      OLLAMA_MODELS: ${{ runner.temp }}/ollama-models
+      OLLAMA_MODELS: ${{ github.workspace }}/.ollama-models
     steps:
       - uses: actions/checkout@v4
         with:
