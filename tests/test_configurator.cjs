@@ -38,7 +38,7 @@ for (const model of Object.keys(MODELS)) {
         assert.match(r.steps[0].shell, /PowerShell/);
         assert.match(r.steps[0].code, /wsl --install -d Ubuntu/);
         assert.match(r.steps[1].shell, /WSL2/);
-        assert.match(r.note, /non.*pris en charge/);
+        assert.match(r.note, /pas pris en charge/);
       }
       if (MODELS[model].type === "stable") {
         assert.match(all, /SHA256SUMS/);
