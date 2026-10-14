@@ -47,6 +47,18 @@ Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou 
 
 > Les besoins réels dépendent notamment de la quantification, du contexte utilisé, du runtime, du système d'exploitation et de la mémoire disponible.
 
+### Laboratoire multi-modèles (branche `projet-x` uniquement)
+
+Les versions Qwen ci-dessus sont les modèles de référence. **Trois nouvelles configurations expérimentales** ont passé des tests automatisés de scripts, **pas encore des benchmarks GPU** :
+
+| Profil | Modèle amont | Vision | Installation |
+|---|---|:---:|---|
+| Kali-Lite Mistral 7B | `mistral:7b-instruct` | Non | `bash scripts/kali-lite-variant.sh --dry-run mistral-7b` |
+| Kali-Lite OLMo 3 7B | `olmo-3:7b-instruct` | Non | `bash scripts/kali-lite-variant.sh --dry-run olmo3-7b` |
+| Kali-Lite Gemma 4 E2B | `gemma4:e2b` | Oui (selon runtime) | `bash scripts/kali-lite-variant.sh --dry-run gemma4-e2b` |
+
+Les quantifications **Q4_K_M et Q8_0** sont aussi disponibles sous forme de recettes distinctes, sans téléchargement implicite : `bash scripts/kali-lite-quant.sh --list`. Voir [le laboratoire](docs/VARIANTS-LAB.md) et [les quantifications](docs/QUANTIZATIONS.md). Ne pas confondre taille disque et VRAM réelle.
+
 ---
 
 ## ⚡ Installation
@@ -321,6 +333,10 @@ Quelques principes :
 | [docs/WHY-KALI-LITE.md](docs/WHY-KALI-LITE.md) | Intention et principes de conception |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture en quatre couches |
 | [templates/anima.template.md](templates/anima.template.md) | Gabarit de personnalisation d'une Anima |
+| [docs/ANIMA-ADVANCED.md](docs/ANIMA-ADVANCED.md) | Identité, spécialités, mémoire et contrats d'outils |
+| [docs/VARIANTS-LAB.md](docs/VARIANTS-LAB.md) | Profils Mistral / OLMo / Gemma (expérimental) |
+| [docs/QUANTIZATIONS.md](docs/QUANTIZATIONS.md) | Presets Q4/Q8, tests et limites |
+| [docs/WINDOWS-WSL2.md](docs/WINDOWS-WSL2.md) | Parcours Windows/WSL2 (pilote non validé sur matériel) |
 | [SECURITY.md](SECURITY.md) | Sécurité et divulgation responsable |
 | [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des installateurs |
 | [LICENSE](LICENSE) | GNU GPL v2 — GPL-2.0-only |
@@ -335,10 +351,18 @@ Quelques principes :
 - [x] Organisation GitHub Kalicorp
 - [x] Documentation de sécurité et Model Card
 - [x] Installation Linux / macOS avec vérification SHA-256
-- [ ] Support Windows / WSL2
-- [ ] Quantifications supplémentaires
-- [ ] Élargissement des modèles de base interchangeables
-- [ ] Documentation de personnalisation avancée des Animas
+- [ ] Support Windows / WSL2 — guide et diagnostic disponibles ; **validation réelle Windows/WSL2 CPU/GPU en attente**
+- [x] Quantifications supplémentaires — recettes **Q4_K_M / Q8_0** des trois profils, tests simulés (benchmarks GPU restant à faire)
+- [x] Élargissement des modèles de base interchangeables — Mistral 7B, OLMo 3 7B, Gemma 4 E2B en **laboratoire**
+- [x] Documentation de personnalisation avancée des Animas — guide, contrat d'outils et cas de validation
+
+### Dernière étape avant clôture complète
+
+- [ ] Tester Windows 10/11 + Ubuntu WSL2 sur machine réelle (CPU, puis GPU si disponible), installation, redémarrage et désinstallation.
+- [ ] Comparer Q4 / Q8 sur les mêmes GPU (VRAM, latence, tokens/s, justesse, fidélité à la doctrine).
+- [ ] Promouvoir les variantes en production **uniquement après** revue humaine des résultats, licences et sécurité.
+
+> Les cases cochées attestent de livrables **logiciels ou documentaires** ; elles ne constituent pas une homologation matérielle ou réglementaire.
 
 ---
 
