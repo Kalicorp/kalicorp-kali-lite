@@ -13,7 +13,7 @@
 [![Systèmes](https://img.shields.io/badge/Linux%20%7C%20macOS-Supportés-425e76?style=for-the-badge)](#-installation)
 [![Windows](https://img.shields.io/badge/Windows%20WSL2-Pilote%20non%20validé-746247?style=for-the-badge)](docs/WINDOWS-WSL2.md)
 
-**[🧭 Composer mon installation](docs/CONFIGURATEUR.md)** · **[⚡ Installation rapide](#-installation)** · **[📊 Résultats GPU](docs/BENCHMARKS.md)** · **[🗺️ Roadmap](#️-roadmap-2026)**
+**[🧭 Composer mon installation](docs/CONFIGURATEUR.md)** · **[⚡ Installation rapide](#installation)** · **[📊 Résultats GPU](docs/BENCHMARKS.md)** · **[🗺️ Roadmap](#roadmap)**
 
 </div>
 
@@ -94,6 +94,8 @@ Les premiers Q4 Mistral/OLMo ont été testés avec `num_ctx=2048`, les Q8 avec 
 
 
 ---
+
+<a id="installation"></a>
 
 ## ⚡ Installation
 
@@ -323,6 +325,8 @@ Quelques principes :
 | [LICENSE](LICENSE) | GNU GPL v2 — GPL-2.0-only |
 
 ---
+
+<a id="roadmap"></a>
 
 ## 🗺️ Roadmap 2026
 

@@ -45,7 +45,7 @@ Pour les deux installateurs stables Qwen, Homebrew est requis (voir [brew.sh](ht
 ### Transparence et sécurité
 
 - Les branches `main` et `projet-x` ne sont **pas** des références figées (hash SHA de commit) ; la procédure nécessite un contrôle humain avant exécution.
-- Le SHA-256 signé ? **Non :** `SHA256SUMS` est un inventaire d'empreintes, pas une signature cryptographique d'éditeur ; il détecte une divergence entre fichiers téléchargés et empreintes du même dépôt mais ne garantit pas l'origine d'un dépôt compromis.
+- **Authenticité du SHA-256 :** `SHA256SUMS` est un inventaire d'empreintes, pas une signature cryptographique d'éditeur ; il détecte une divergence entre fichiers téléchargés et empreintes du même dépôt mais ne garantit pas l'origine d'un dépôt compromis.
 - La page ne présente jamais une commande `curl | bash`, un `sudo` macOS, ni un téléchargement silencieux de modèles expérimentaux.
 - Les installateurs peuvent modifier le système local et télécharger des dépendances lorsqu'on les exécute volontairement.
 - La page ne mesure pas la RAM disponible et **ne garantit donc pas** qu'un modèle Q8 pourra être chargé intégralement dans un GPU donné.
