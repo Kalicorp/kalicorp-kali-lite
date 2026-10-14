@@ -1,0 +1,33 @@
+name: Test roadmap laboratory
+on:
+  push:
+    paths:
+      - 'README.md'
+      - 'docs/ANIMA-ADVANCED.md'
+      - 'docs/QUANTIZATIONS.md'
+      - 'docs/WINDOWS-WSL2.md'
+      - 'scripts/kali-lite-quant.sh'
+      - 'scripts/check-wsl2.sh'
+      - 'tests/test_quant.sh'
+      - '.github/workflows/test-roadmap.yml'
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/ANIMA-ADVANCED.md'
+      - 'docs/QUANTIZATIONS.md'
+      - 'docs/WINDOWS-WSL2.md'
+      - 'scripts/kali-lite-quant.sh'
+      - 'scripts/check-wsl2.sh'
+      - 'tests/test_quant.sh'
+      - '.github/workflows/test-roadmap.yml'
+permissions:
+  contents: read
+jobs:
+  roadmap-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simulations hors ligne
+        shell: bash
+        run: bash tests/test_quant.sh

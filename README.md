@@ -47,6 +47,42 @@ Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou 
 
 > Les besoins réels dépendent notamment de la quantification, du contexte utilisé, du runtime, du système d'exploitation et de la mémoire disponible.
 
+### Laboratoire multi-modèles (branche `projet-x` uniquement)
+
+Les versions Qwen ci-dessus sont les modèles de référence. **Trois nouvelles configurations expérimentales** ont passé les tests automatisés de scripts. Des essais réels Q4 **et Q8** sur RTX 4090 (Ubuntu 26, Ollama 0.40.4 côté serveur) ont confirmé les trois profils sur des prompts synthétiques courts (Mistral, OLMo 3, Gemma 4) :
+
+| Profil | Modèle amont | Vision | Installation |
+|---|---|:---:|---|
+| Kali-Lite Mistral 7B | `mistral:7b-instruct` | Non | `bash scripts/kali-lite-variant.sh --dry-run mistral-7b` |
+| Kali-Lite OLMo 3 7B | `olmo-3:7b-instruct` | Non | `bash scripts/kali-lite-variant.sh --dry-run olmo3-7b` |
+| Kali-Lite Gemma 4 E2B | `gemma4:e2b` | Oui (selon runtime) | `bash scripts/kali-lite-variant.sh --dry-run gemma4-e2b` |
+
+Les quantifications **Q4_K_M et Q8_0** sont aussi disponibles sous forme de recettes distinctes, sans téléchargement implicite : `bash scripts/kali-lite-quant.sh --list`. Voir [le laboratoire](docs/VARIANTS-LAB.md) et [les quantifications](docs/QUANTIZATIONS.md). Ne pas confondre taille disque et VRAM réelle.
+
+#### Vérification terrain RTX 4090 — 14 octobre 2026
+
+| Profil Q4 | GPU observé | Smoke test | Débit sur deux réponses courtes | Occupation VRAM du processus |
+|---|---|---|---|---|
+| **Mistral 7B** | RTX 4090, 100 % GPU | **3/3** | 172,02 et 169,81 tok/s | ~4 912 MiB |
+| **OLMo 3 7B** | RTX 4090, 100 % GPU | **3/3** | 167,06 et 169,37 tok/s | ~5 612 MiB |
+| **Gemma 4 E2B** | RTX 4090, 100 % GPU | **3/3** (think=false) | 386,59 et 522,47 tok/s | ~3 378 MiB |
+
+#### Smoke tests Q8 réels — RTX 4090, 14 octobre 2026
+
+| Profil Q8 | Résultat | Deux derniers débits (réponses courtes) | VRAM du processus |
+|---|---|---|---|
+| **Mistral 7B Q8_0** | **3/3** | 107,08 et 105,70 tok/s | ~8 282 MiB |
+| **OLMo 3 7B Q8_0** | **3/3** | 106,46 et 105,94 tok/s | ~9 580 MiB |
+| **Gemma 4 E2B Q8_0** | **3/3** | 210,85 et 220,79 tok/s | ~4 122 MiB |
+
+Les premiers appels Q8 ont duré respectivement 6,174 s, 4,864 s et 13,184 s (chargement compris). **Anomalie Gemma Q8 : 0,2 tok/s pour le premier prompt**, puis débit normal pour les deux suivants ; à diagnostiquer avant classement. Les Q8 ont été testés avec `think=false`, `num_ctx=4096`, `num_predict=256`.
+
+**Attention à la comparabilité :** les premiers smoke tests Q4 Mistral/OLMo étaient à `num_ctx=2048`, contre `4096` pour les Q8. Ces six succès confirment le fonctionnement GPU, **pas** une comparaison équitable Q4/Q8. Les débits concernent des générations trop courtes pour établir une performance représentative.
+
+Gemma 4 : le benchmark initial a échoué sur une réponse vide avec 80 tokens de budget et un mode de raisonnement implicite. Après correction du banc (`think=false`, `num_ctx=4096`, `num_predict=256`), l'opérateur a obtenu **3/3 heuristiques**, zéro réponse vide, sur la RTX 4090. Débits observés sur trois réponses très courtes : 135,37, 386,59 et 522,47 tok/s ; premier appel : 4,256 s. Les deux derniers débits ne sont **pas** un classement de vitesse des modèles en tâche réelle.
+
+Ces résultats portent sur des **prompts synthétiques très courts**, `num_ctx=2048` pour les premiers benchmarks, sans répétitions suffisantes pour certifier la performance en charge. Les six profils Q4/Q8 ont réussi leur smoke test GPU. Les générations longues, les contextes élevés, la vision Gemma, la comparaison contrôlée Q4/Q8 et WSL2 restent à vérifier. Voir [le protocole et les limites](docs/BENCHMARKS.md).
+
 ---
 
 ## ⚡ Installation
@@ -321,6 +357,11 @@ Quelques principes :
 | [docs/WHY-KALI-LITE.md](docs/WHY-KALI-LITE.md) | Intention et principes de conception |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture en quatre couches |
 | [templates/anima.template.md](templates/anima.template.md) | Gabarit de personnalisation d'une Anima |
+| [docs/ANIMA-ADVANCED.md](docs/ANIMA-ADVANCED.md) | Identité, spécialités, mémoire et contrats d'outils |
+| [docs/VARIANTS-LAB.md](docs/VARIANTS-LAB.md) | Profils Mistral / OLMo / Gemma (expérimental) |
+| [docs/QUANTIZATIONS.md](docs/QUANTIZATIONS.md) | Presets Q4/Q8, tests et limites |
+| [docs/WINDOWS-WSL2.md](docs/WINDOWS-WSL2.md) | Parcours Windows/WSL2 (pilote non validé sur matériel) |
+| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Tests multi-OS, inférence CPU GitHub et mesures GPU RTX 4090 |
 | [SECURITY.md](SECURITY.md) | Sécurité et divulgation responsable |
 | [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des installateurs |
 | [LICENSE](LICENSE) | GNU GPL v2 — GPL-2.0-only |
@@ -335,10 +376,21 @@ Quelques principes :
 - [x] Organisation GitHub Kalicorp
 - [x] Documentation de sécurité et Model Card
 - [x] Installation Linux / macOS avec vérification SHA-256
-- [ ] Support Windows / WSL2
-- [ ] Quantifications supplémentaires
-- [ ] Élargissement des modèles de base interchangeables
-- [ ] Documentation de personnalisation avancée des Animas
+- [ ] Support Windows / WSL2 — guide et diagnostic disponibles ; **validation réelle Windows/WSL2 CPU/GPU en attente**
+- [x] Quantifications supplémentaires — recettes **Q4_K_M / Q8_0** des trois profils ; **six smoke tests réels RTX 4090, 3/3 chacun (18/18 heuristiques)**. Performances longues et comparaison contrôlée à faire.
+- [x] Élargissement des modèles de base interchangeables — Mistral 7B, OLMo 3 7B, Gemma 4 E2B en **laboratoire**
+- [x] Documentation de personnalisation avancée des Animas — guide, contrat d'outils et cas de validation
+
+### Dernière étape avant clôture complète
+
+- [ ] Tester Windows 10/11 + Ubuntu WSL2 sur machine réelle (CPU, puis GPU si disponible), installation, redémarrage et désinstallation.
+- [x] Compléter le smoke test corrigé de **Gemma 4 Q4** : 3/3 heuristiques, `think=false`, 4 096 tokens de contexte, fichier JSON obtenu.
+- [x] Exécuter les **trois profils Q8_0** sur RTX 4090 : Mistral, OLMo 3 et Gemma 4, 3/3 heuristiques chacun, déchargement après chaque test.
+- [ ] Comparer équitablement **Q4 / Q8** sur la RTX 4090 avec les mêmes paramètres de contexte et les mêmes prompts longs, répétitions, latence, VRAM, tokens/s et fidélité à la doctrine (les six smoke tests GPU sont acquis).
+- [ ] Investiguer l'anomalie de débit du **premier appel Gemma Q8** : 0,2 tok/s avec 13,184 s de temps mural.
+- [ ] Promouvoir les variantes en production **uniquement après** revue humaine des résultats, licences et sécurité.
+
+> Les cases cochées attestent de livrables **logiciels ou documentaires** ; elles ne constituent pas une homologation matérielle ou réglementaire.
 
 ---
 

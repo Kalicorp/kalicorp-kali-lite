@@ -1,0 +1,48 @@
+name: Cross-platform laboratory tests
+on:
+  push:
+    paths:
+      - '.github/workflows/test-cross-platform.yml'
+      - 'tests/test_bench_ollama.py'
+      - 'scripts/bench_ollama.py'
+      - 'scripts/kali-lite-quant.sh'
+      - 'scripts/check-wsl2.sh'
+      - 'tests/test_quant.sh'
+      - 'tests/test_variants.sh'
+      - 'scripts/kali-lite-variant.sh'
+      - 'variants/**'
+  pull_request:
+    paths:
+      - '.github/workflows/test-cross-platform.yml'
+      - 'tests/test_bench_ollama.py'
+      - 'scripts/bench_ollama.py'
+      - 'scripts/kali-lite-quant.sh'
+      - 'scripts/check-wsl2.sh'
+      - 'tests/test_quant.sh'
+      - 'tests/test_variants.sh'
+      - 'scripts/kali-lite-variant.sh'
+      - 'variants/**'
+permissions:
+  contents: read
+jobs:
+  simulated:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test scripts et tests unitaires sans modèle
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/test_variants.sh
+          bash tests/test_quant.sh
+          python -m unittest discover -s tests -p 'test_bench_ollama.py' -v
