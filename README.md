@@ -13,7 +13,7 @@
 [![Systèmes](https://img.shields.io/badge/Linux%20%7C%20macOS-Supportés-425e76?style=for-the-badge)](#-installation)
 [![Windows](https://img.shields.io/badge/Windows%20WSL2-Pilote%20non%20validé-746247?style=for-the-badge)](docs/WINDOWS-WSL2.md)
 
-**[🧭 Composer mon installation](docs/CONFIGURATEUR.md)** · **[⚡ Installation rapide](#installation)** · **[📊 Résultats GPU](docs/BENCHMARKS.md)** · **[🗺️ Roadmap](#roadmap)**
+**[🧭 Composer mon installation](docs/CONFIGURATEUR.md)** · **[⚡ Installation rapide](#installation)** · **[🔌 Hermes Agent CLI](docs/HERMES-AGENT.md)** · **[📊 Résultats GPU](docs/BENCHMARKS.md)** · **[🗺️ Roadmap](#roadmap)**
 
 </div>
 
@@ -27,7 +27,9 @@
 | **2 · Système** | Linux, macOS ou Windows via WSL2 (pilote) | Commandes adaptées au terminal |
 | **3 · Quantification** | Q4_K_M ou Q8_0 pour les variantes du laboratoire | Pull explicite et tag Ollama distinct |
 
-**[Ouvrir le guide du configurateur →](docs/CONFIGURATEUR.md)** · Page statique locale : aucun compte, aucune télémétrie, aucune commande exécutée par le navigateur. L'hébergement GitHub Pages pourra fournir ensuite une URL directe, après activation. 
+**[Ouvrir le guide du configurateur →](docs/CONFIGURATEUR.md)** · Page statique locale : aucun compte, aucune télémétrie, aucune commande exécutée par le navigateur. L'hébergement GitHub Pages pourra fournir ensuite une URL directe, après activation.
+
+**Déjà utilisateur d'Hermes Agent CLI ?** [Connecter Kali-Lite à Hermes via Ollama →](docs/HERMES-AGENT.md) — passerelle documentée, tests agentiques 64K et appels d'outils encore en attente. 
 
 ### Choisir son moteur directement dans GitHub
 
@@ -228,6 +230,24 @@ ollama pull gemma4:e2b-it-q8_0
 bash scripts/kali-lite-quant.sh --create gemma4-e2b q8
 ollama run kali-lite-gemma4-e2b-q8
 ```
+
+</details>
+
+<details>
+<summary><strong>🔌 Hermes Agent CLI — utiliser Kali-Lite comme moteur Ollama (pilote)</strong></summary>
+
+Hermes Agent CLI accepte l'API OpenAI-compatible d'Ollama. Pour le connecter à un **modèle Kali-Lite effectivement installé** sur l'instance locale choisie :
+
+```bash
+curl -fsS http://127.0.0.1:11434/v1/models
+hermes model
+```
+
+Dans Hermes, sélectionner **Custom endpoint**, renseigner `http://127.0.0.1:11434/v1` (adapter au port réel) puis le nom exact du modèle.
+
+**⚠️ Prérequis bloquant :** Hermes demande **au moins 64 000 tokens de contexte**. Les Modelfiles Kali-Lite actuellement publiés utilisent généralement 8K/32K, et ne sont **pas qualifiés** tels quels. Ne pas modifier la production et ne pas déclarer 64K côté Hermes sans les avoir effectivement configurés et mesurés dans Ollama.
+
+[**Guide complet Kali-Lite × Hermes Agent CLI →**](docs/HERMES-AGENT.md) · [Documentation officielle Hermes](https://hermes-agent.nousresearch.com/docs/integrations/providers/)
 
 </details>
 
@@ -542,7 +562,9 @@ Quelques principes :
 | [docs/VARIANTS-LAB.md](docs/VARIANTS-LAB.md) | Profils Mistral / OLMo / Gemma (expérimental) |
 | [docs/QUANTIZATIONS.md](docs/QUANTIZATIONS.md) | Presets Q4/Q8, tests et limites |
 | [docs/WINDOWS-WSL2.md](docs/WINDOWS-WSL2.md) | Parcours Windows/WSL2 (pilote non validé sur matériel) |
-| [docs/CONFIGURATEUR.md](docs/CONFIGURATEUR.md) | Page d'installation interactive locale et publication statique |\n| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Tests multi-OS, inférence CPU GitHub et mesures GPU RTX 4090 |
+| [docs/CONFIGURATEUR.md](docs/CONFIGURATEUR.md) | Page d'installation interactive locale et publication statique |
+| [docs/HERMES-AGENT.md](docs/HERMES-AGENT.md) | Connexion Ollama vers Hermes Agent CLI, exigences de contexte 64K et tests d'outils |
+| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Tests multi-OS, inférence CPU GitHub et mesures GPU RTX 4090 |
 | [SECURITY.md](SECURITY.md) | Sécurité et divulgation responsable |
 | [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des installateurs |
 | [LICENSE](LICENSE) | GNU GPL v2 — GPL-2.0-only |

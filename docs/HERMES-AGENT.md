@@ -69,12 +69,12 @@ PY
 less kali-lite-hermes-test.Modelfile
 
 # Vérifier qu'on ne remplace pas un tag existant :
-ollama show kali-lite-v2-hermes-test >/dev/null 2>&1 && {
-  echo "Tag déjà présent : ne pas écraser"; exit 1;
-}
-
-# Créer un nouveau tag sans toucher à kali-lite-v2 :
-ollama create kali-lite-v2-hermes-test -f kali-lite-hermes-test.Modelfile
+if ollama show kali-lite-v2-hermes-test >/dev/null 2>&1; then
+  echo "Tag déjà présent : aucune modification."
+else
+  # Créer un nouveau tag sans toucher à kali-lite-v2 :
+  ollama create kali-lite-v2-hermes-test -f kali-lite-hermes-test.Modelfile
+fi
 ```
 
 Cette commande ne rend **pas** magiquement le modèle capable de traiter 64K et **n'est pas une recette certifiée**. Préférer une machine de test et un modèle dont la fenêtre native est suffisante. Les fichiers de test et le tag peuvent ensuite être supprimés **volontairement** ; ne pas supprimer un modèle partagé.
