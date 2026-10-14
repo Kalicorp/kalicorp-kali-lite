@@ -111,7 +111,7 @@ def run(model, endpoint, num_ctx, num_predict, timeout):
         "tests": rows,
         "heuristic_pass_count": sum(row["heuristic_pass"] for row in rows),
         "heuristic_total": len(rows),
-        "warning": "Mesures CPU et heuristiques exploratoires, non preuve de conformité ni de qualité générale. Réponses à relire.",
+        "warning": "Mesures d'inférence et heuristiques exploratoires ; dispositif CPU/GPU non attesté par ce JSON. Vérifier Ollama ps et nvidia-smi ; relire les réponses.",
     }
 
 

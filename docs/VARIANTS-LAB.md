@@ -10,7 +10,7 @@ Comparer des bases interchangeables sous une doctrine Kalicorp stable, sans touc
 |---|---|---|---|---|
 | `mistral-7b` | `mistral:7b-instruct` (v0.3) | `kali-lite-mistral-7b` | Chat / français / outils suivant runtime | ~4,4 Go |
 | `olmo3-7b` | `olmo-3:7b-instruct` | `kali-lite-olmo3-7b` | Transparence / respect consignes / anglais-français | ~4,5 Go |
-| `gemma4-e2b` | `gemma4:e2b` | `kali-lite-gemma4-e2b` | Edge / vision / latence | ~7,2 Go (Q4_K_M), ~8,1 Go (Q8_0) |
+| `gemma4-e2b` | `gemma4:e2b` | `kali-lite-gemma4-e2b` | Edge / vision / latence | ~4,6 Go (Q4_K_M), Q8 à vérifier selon le digest |
 
 **OLMo 9B :** aucun modèle officiel OLMo 9B n'a été identifié pendant cette reconnaissance. Ce profil utilise explicitement **OLMo 3 7B Instruct**, pas un 9B fictif. Ce choix peut évoluer si un modèle 9B officiel est confirmé ultérieurement.
 
