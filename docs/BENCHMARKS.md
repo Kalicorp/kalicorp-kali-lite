@@ -10,7 +10,7 @@ Aucune mesure de VRAM n'est déductible d'un test sur runner CPU. Les trois prom
 ## Ce qui attend un test réel
 
 - WSL2 : valider l'installation/désinstallation sur un hôte Windows avec WSL2 opérationnel, pas seulement Git Bash.
-- GPU Kalicorp : les essais **Q4 Mistral / OLMo / Gemma 4** sur RTX 4090 ont passé chacun 3/3 heuristiques (voir mesures ci-dessous). Il reste à faire des générations longues, des répétitions et les **Q8** ; relever systématiquement VRAM avec `nvidia-smi`.
+- GPU Kalicorp : les essais **Q4 et Q8 Mistral / OLMo / Gemma 4** sur RTX 4090 ont passé chacun 3/3 heuristiques (voir mesures ci-dessous). Il reste à faire des générations longues, des répétitions, une comparaison à paramètres égaux et l'analyse du premier appel Gemma Q8 ; relever systématiquement VRAM avec `nvidia-smi`.
 - Vision : jeu d'images de test libre de droits pour Gemma 4, résultats interprétés humainement.
 - Confidentialité : tests réseau du harnais complet dans un environnement contrôlé (pas uniquement dans le modèle).
 
@@ -77,4 +77,21 @@ En cas de sortie vide, les résultats précédents restent enregistrés en JSON 
 
 **À ne pas conclure :** supériorité d'un modèle à partir de deux réponses très courtes ; débit de génération longue ; consommation de puissance moyenne ; conformité/souveraineté du harnais ; capacités vision ou support WSL2. Les valeurs de mémoire sont instantanées, et les premiers appels incluent chargement/initialisation.
 
-**Règle de qualification :** ces observations valident le smoke test GPU Q4 de **Mistral, OLMo et Gemma 4 (3/3 chacun)**, pas la comparaison Q4/Q8, les capacités multimodales ou une qualification de production.
+**Règle de qualification :** ces observations valident le smoke test GPU Q4 **et Q8** de **Mistral, OLMo et Gemma 4 (3/3 chacun, 18/18 au total)**, pas la comparaison de performance à conditions égales, les capacités multimodales ni une qualification de production.
+
+
+## Smoke tests Q8_0 sur RTX 4090 — 14 octobre 2026
+
+**Source des mesures :** sortie du terminal de l'opérateur, instance de laboratoire `127.0.0.1:11555`. Tous les profils chargés à **100 % sur le GPU 0 RTX 4090** ; `think=false`, contexte 4 096, `num_predict=256`. L'opérateur a exécuté `ollama stop` après chaque test. Les rapports JSON locaux sont conservés sous `results-4090/`, **pas encore déposés dans le dépôt GitHub**.
+
+| Profil Q8 | Heuristiques | Temps mural du premier appel | Débits évaluateur (1er, 2e, 3e prompt) | VRAM du processus (capture instantanée) |
+|---|---|---:|---|---:|
+| `kali-lite-mistral-7b-q8` | **3/3**, aucune réponse vide | 6,174 s | 144,74 / 107,08 / 105,70 tok/s | 8 282 MiB |
+| `kali-lite-olmo3-7b-q8` | **3/3**, aucune réponse vide | 4,864 s | 132,66 / 106,46 / 105,94 tok/s | 9 580 MiB |
+| `kali-lite-gemma4-e2b-q8` | **3/3**, aucune réponse vide | 13,184 s | **0,20** / 210,85 / 220,79 tok/s | 4 122 MiB |
+
+**À examiner :** pour Gemma Q8, le taux du **premier prompt** de 0,20 tok/s paraît atypique par rapport aux deux suivants. Les journaux ne suffisent pas à identifier sa cause ; conserver les données `eval_duration`, `eval_count` et `load_duration` du JSON et reproduire le cas avant de l'interpréter. Les métriques de débit ne doivent pas être inférées du seul temps mural de chargement.
+
+**Limites de comparaison Q4/Q8 :** pour Mistral et OLMo, les captures Q4 utilisaient 2 048 tokens de contexte tandis que les essais Q8 utilisaient 4 096. Pour Gemma, les deux versions utilisent 4 096, mais toutes les réponses restent trop courtes et les essais non répétés. En conséquence, **six smoke tests réussis ne signifient pas que la comparaison de performance Q4/Q8 est terminée**.
+
+**Reste à faire :** benchmarks répétés à paramètres identiques sur génération longue, expérimentation multimodale Gemma, validation matérielle WSL2 et revue préalable à toute promotion en production.
