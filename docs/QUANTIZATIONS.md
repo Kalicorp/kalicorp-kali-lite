@@ -8,8 +8,8 @@
 | Mistral 7B v0.3 | Q8_0 | `mistral:7b-instruct-v0.3-q8_0` | ~7,7 Go |
 | OLMo 3 7B Instruct | Q4_K_M | `olmo-3:7b-instruct-q4_K_M` | ~4,5 Go |
 | OLMo 3 7B Instruct | Q8_0 | `olmo-3:7b-instruct-q8_0` | ~7,8 Go |
-| Gemma 4 E2B | Q4_K_M | `gemma4:e2b-it-q4_K_M` | ~4,6 Go |
-| Gemma 4 E2B | Q8_0 | `gemma4:e2b-it-q8_0` | taille à vérifier lors du téléchargement |
+| Gemma 4 E2B | Q4_K_M | `gemma4:e2b-it-q4_K_M` | ~7,2 Go |
+| Gemma 4 E2B | Q8_0 | `gemma4:e2b-it-q8_0` | ~8,1 Go |
 
 La taille d'artefact **n'est pas** la VRAM totale nécessaire : compter aussi le cache KV, le contexte, le runtime et, le cas échéant, la vision.
 

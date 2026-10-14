@@ -337,6 +337,7 @@ Quelques principes :
 | [docs/VARIANTS-LAB.md](docs/VARIANTS-LAB.md) | Profils Mistral / OLMo / Gemma (expérimental) |
 | [docs/QUANTIZATIONS.md](docs/QUANTIZATIONS.md) | Presets Q4/Q8, tests et limites |
 | [docs/WINDOWS-WSL2.md](docs/WINDOWS-WSL2.md) | Parcours Windows/WSL2 (pilote non validé sur matériel) |
+| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Tests multi-OS et inférence CPU réelle sur runner GitHub |
 | [SECURITY.md](SECURITY.md) | Sécurité et divulgation responsable |
 | [SHA256SUMS](SHA256SUMS) | Empreintes SHA-256 des installateurs |
 | [LICENSE](LICENSE) | GNU GPL v2 — GPL-2.0-only |
