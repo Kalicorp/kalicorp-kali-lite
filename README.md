@@ -49,7 +49,7 @@ Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou 
 
 ### Laboratoire multi-modèles (branche `projet-x` uniquement)
 
-Les versions Qwen ci-dessus sont les modèles de référence. **Trois nouvelles configurations expérimentales** ont passé des tests automatisés de scripts, **pas encore des benchmarks GPU** :
+Les versions Qwen ci-dessus sont les modèles de référence. **Trois nouvelles configurations expérimentales** ont passé les tests automatisés de scripts. Des essais réels Q4 sur RTX 4090 (Ubuntu 26, Ollama 0.40.4 côté serveur) ont depuis confirmé Mistral et OLMo ; Gemma 4 fonctionne mais son benchmark complet reste à refaire :
 
 | Profil | Modèle amont | Vision | Installation |
 |---|---|:---:|---|
@@ -58,6 +58,18 @@ Les versions Qwen ci-dessus sont les modèles de référence. **Trois nouvelles 
 | Kali-Lite Gemma 4 E2B | `gemma4:e2b` | Oui (selon runtime) | `bash scripts/kali-lite-variant.sh --dry-run gemma4-e2b` |
 
 Les quantifications **Q4_K_M et Q8_0** sont aussi disponibles sous forme de recettes distinctes, sans téléchargement implicite : `bash scripts/kali-lite-quant.sh --list`. Voir [le laboratoire](docs/VARIANTS-LAB.md) et [les quantifications](docs/QUANTIZATIONS.md). Ne pas confondre taille disque et VRAM réelle.
+
+#### Vérification terrain RTX 4090 — 14 octobre 2026
+
+| Profil Q4 | GPU observé | Smoke test | Débit sur deux réponses courtes | Occupation VRAM du processus |
+|---|---|---|---|---|
+| **Mistral 7B** | RTX 4090, 100 % GPU | **3/3** | 172,02 et 169,81 tok/s | ~4 912 MiB |
+| **OLMo 3 7B** | RTX 4090, 100 % GPU | **3/3** | 167,06 et 169,37 tok/s | ~5 612 MiB |
+| **Gemma 4 E2B** | RTX 4090, génération observée | **partiel** | non mesuré de manière comparable | non consolidé |
+
+Gemma 4 : le benchmark initial a échoué sur une réponse vide avec seulement 80 tokens de budget. Le diagnostic opérateur a confirmé `Paris` avec `think=false` sur le modèle amont **et** Kali-Lite (2 tokens dans chaque cas), puis `Paris` avec `think=true` (196 tokens). Ce **n'est pas** un 3/3 du benchmark corrigé. Le mode de raisonnement est désormais explicite dans le banc d'essai.
+
+Ces résultats portent sur des **prompts synthétiques très courts**, `num_ctx=2048` pour les premiers benchmarks, sans répétitions suffisantes pour certifier la performance en charge. Les modèles Q8, les longs contextes, la vision Gemma et WSL2 restent à vérifier. Voir [le protocole et les limites](docs/BENCHMARKS.md).
 
 ---
 
@@ -353,14 +365,15 @@ Quelques principes :
 - [x] Documentation de sécurité et Model Card
 - [x] Installation Linux / macOS avec vérification SHA-256
 - [ ] Support Windows / WSL2 — guide et diagnostic disponibles ; **validation réelle Windows/WSL2 CPU/GPU en attente**
-- [x] Quantifications supplémentaires — recettes **Q4_K_M / Q8_0** des trois profils, tests simulés (benchmarks GPU restant à faire)
+- [x] Quantifications supplémentaires — recettes **Q4_K_M / Q8_0** des trois profils, tests simulés ; **Mistral/OLMo Q4 testés sur RTX 4090**, Q8 encore à mesurer
 - [x] Élargissement des modèles de base interchangeables — Mistral 7B, OLMo 3 7B, Gemma 4 E2B en **laboratoire**
 - [x] Documentation de personnalisation avancée des Animas — guide, contrat d'outils et cas de validation
 
 ### Dernière étape avant clôture complète
 
 - [ ] Tester Windows 10/11 + Ubuntu WSL2 sur machine réelle (CPU, puis GPU si disponible), installation, redémarrage et désinstallation.
-- [ ] Comparer Q4 / Q8 sur les mêmes GPU (VRAM, latence, tokens/s, justesse, fidélité à la doctrine).
+- [ ] Compléter le benchmark corrigé de **Gemma 4 Q4** (3 prompts, raisonnement désactivé, résultat JSON).
+- [ ] Comparer **Q4 / Q8** sur la RTX 4090 avec prompts longs, répétitions, VRAM, latence, tokens/s et fidélité à la doctrine (les essais courts Q4 Mistral/OLMo sont acquis).
 - [ ] Promouvoir les variantes en production **uniquement après** revue humaine des résultats, licences et sécurité.
 
 > Les cases cochées attestent de livrables **logiciels ou documentaires** ; elles ne constituent pas une homologation matérielle ou réglementaire.

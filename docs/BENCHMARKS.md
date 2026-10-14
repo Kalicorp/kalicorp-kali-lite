@@ -10,7 +10,7 @@ Aucune mesure de VRAM n'est déductible d'un test sur runner CPU. Les trois prom
 ## Ce qui attend un test réel
 
 - WSL2 : valider l'installation/désinstallation sur un hôte Windows avec WSL2 opérationnel, pas seulement Git Bash.
-- GPU Kalicorp : choisir un GPU libre, bloquer la fréquence/contexte/quantification et relever VRAM avec `nvidia-smi` ; mesurer le même jeu de prompts sur tous les modèles, avec répétitions et moyennes.
+- GPU Kalicorp : les premiers essais **Q4 Mistral / OLMo** sur la RTX 4090 sont confirmés (voir mesures ci-dessous). Il reste à faire des générations longues, des répétitions, les **Q8** et le benchmark complet **Gemma 4** ; relever systématiquement VRAM avec `nvidia-smi`.
 - Vision : jeu d'images de test libre de droits pour Gemma 4, résultats interprétés humainement.
 - Confidentialité : tests réseau du harnais complet dans un environnement contrôlé (pas uniquement dans le modèle).
 
@@ -61,3 +61,20 @@ python3 scripts/bench_ollama.py --model kali-lite-gemma4-e2b-q4 \
 ```
 
 En cas de sortie vide, les résultats précédents restent enregistrés en JSON et le programme se termine avec code non nul pour alerter la CI. Pour mesurer le GPU, relever séparément `ollama ps` et `nvidia-smi -i 0`. La validation multimodale et les longs contextes restent à tester.
+
+
+## Premiers résultats observés sur la RTX 4090 — 14 octobre 2026
+
+**Provenance :** sorties terminal transmises par l'opérateur depuis Ubuntu 26, GPU 0 NVIDIA GeForce RTX 4090 (24 GiB), pilote 595.99.02, CUDA affiché 13.2, Ollama serveur 0.40.4, client 0.40.3. Instance de laboratoire sur `127.0.0.1:11555`, distincte du conteneur de production. Modèles Q4 et contexte 2 048 tokens lors des premiers smoke tests.
+
+| Profil | Vérification | Temps du premier appel (avec chargement) | Débits des deux réponses suivantes | VRAM du processus affichée dans nvidia-smi |
+|---|---|---:|---|---:|
+| `kali-lite-mistral-7b-q4` | 3/3 heuristiques ; GPU 0, 100 % GPU | 30,609 s | 172,02 et 169,81 tok/s | 4 912 MiB |
+| `kali-lite-olmo3-7b-q4` | 3/3 heuristiques ; GPU 0, 100 % GPU | 10,268 s | 167,06 et 169,37 tok/s | 5 612 MiB |
+| `kali-lite-gemma4-e2b-q4` | Inférence confirmée, benchmark initial interrompu sur réponse vide | Non comparable | Non consolidé | Non consolidé |
+
+**Expérience Gemma 4 :** la réponse vide du premier benchmark ne signifie pas un modèle défaillant. Le modèle amont et la configuration Kalicorp répondent `Paris` avec `think=false` et `num_predict=256` ; avec `think=true`, la même question produit une réponse correcte après 196 tokens au total. Le mécanisme de l'échec initial (budget de 80 tokens sans option `think` explicite) reste une hypothèse, pas une observation directe.
+
+**À ne pas conclure :** supériorité d'un modèle à partir de deux réponses très courtes ; débit de génération longue ; consommation de puissance moyenne ; conformité/souveraineté du harnais ; capacités vision ou support WSL2. Les valeurs de mémoire sont instantanées, et les premiers appels incluent chargement/initialisation.
+
+**Règle de qualification :** ces observations valident le smoke test GPU Q4 **Mistral et OLMo**, pas la comparaison Q4/Q8 ni une qualification de production. Le benchmark corrigé de Gemma doit encore retourner ses trois résultats pour passer à « 3/3 ».
