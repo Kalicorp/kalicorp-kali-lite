@@ -1,0 +1,107 @@
+name: Real Ollama CPU smoke benchmark
+on:
+  # Un lancement pour valider le workflow dans le fork ; futurs essais via Actions > Run workflow.
+  push:
+    branches: [bench-validation]
+    paths:
+      - '.github/workflows/bench-ollama-cpu.yml'
+      - 'scripts/bench_ollama.py'
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: Profil expérimental à tester (CPU uniquement)
+        required: true
+        default: mistral-7b
+        type: choice
+        options: [mistral-7b, olmo3-7b, gemma4-e2b]
+      quant:
+        description: Quantification Ollama
+        required: true
+        default: q4
+        type: choice
+        options: [q4, q8]
+permissions:
+  contents: read
+concurrency:
+  group: real-cpu-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  cpu-smoke:
+    # Un runner public standard Ubuntu sans GPU ; aucun secret ou donnée client.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VARIANT: ${{ inputs.variant || 'mistral-7b' }}
+      QUANT: ${{ inputs.quant || 'q4' }}
+      OLLAMA_HOST: 127.0.0.1:11434
+      OLLAMA_MODELS: ${{ github.workspace }}/.ollama-models
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inventaire des ressources
+        shell: bash
+        run: |
+          set -euo pipefail
+          free -h
+          df -h .
+          nproc
+      - name: Installation contrôlée sur VM éphémère
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 https://ollama.com/install.sh -o "$RUNNER_TEMP/install-ollama.sh"
+          sha256sum "$RUNNER_TEMP/install-ollama.sh"
+          # VM GitHub jetable, token du checkout non persisté, aucun secret injecté.
+          sudo sh "$RUNNER_TEMP/install-ollama.sh"
+          ollama --version
+          sudo systemctl stop ollama || true
+          mkdir -p "$OLLAMA_MODELS"
+          nohup ollama serve >"$RUNNER_TEMP/ollama-serve.log" 2>&1 &
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:11434/api/version > "$RUNNER_TEMP/ollama-version.json"; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            tail -50 "$RUNNER_TEMP/ollama-serve.log"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/ollama-version.json"
+      - name: Télécharger explicitement et créer la variante sur CPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$VARIANT:$QUANT" in
+            mistral-7b:q4) source=mistral:7b-instruct-v0.3-q4_K_M ;;
+            mistral-7b:q8) source=mistral:7b-instruct-v0.3-q8_0 ;;
+            olmo3-7b:q4) source=olmo-3:7b-instruct-q4_K_M ;;
+            olmo3-7b:q8) source=olmo-3:7b-instruct-q8_0 ;;
+            gemma4-e2b:q4) source=gemma4:e2b-it-q4_K_M ;;
+            gemma4-e2b:q8) source=gemma4:e2b-it-q8_0 ;;
+            *) echo 'Profil invalide'; exit 2 ;;
+          esac
+          echo "Source exacte : $source"
+          ollama pull "$source"
+          bash scripts/kali-lite-quant.sh --create "$VARIANT" "$QUANT"
+          ollama list
+          printf 'SOURCE=%s\n' "$source" >> "$GITHUB_ENV"
+      - name: Inférence réelle avec prompts synthétiques
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/bench_ollama.py \
+            --model "kali-lite-${VARIANT}-${QUANT}" \
+            --num-ctx 2048 --num-predict 80 \
+            --output "$RUNNER_TEMP/benchmark.json"
+          python3 -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"], "benchmark.json"); r=json.load(open(p)); print("Résultats de " + r["model"] + ": " + str(r["heuristic_pass_count"]) + "/" + str(r["heuristic_total"]))'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cpu-benchmark-${{ env.VARIANT }}-${{ env.QUANT }}
+          path: ${{ runner.temp }}/benchmark.json
+          if-no-files-found: warn
+          retention-days: 7
