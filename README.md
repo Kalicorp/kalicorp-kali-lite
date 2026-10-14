@@ -27,7 +27,230 @@
 | **2 · Système** | Linux, macOS ou Windows via WSL2 (pilote) | Commandes adaptées au terminal |
 | **3 · Quantification** | Q4_K_M ou Q8_0 pour les variantes du laboratoire | Pull explicite et tag Ollama distinct |
 
-**[Ouvrir le guide du configurateur →](docs/CONFIGURATEUR.md)** · Page statique locale : aucun compte, aucune télémétrie, aucune commande exécutée par le navigateur. L'hébergement GitHub Pages pourra fournir ensuite une URL directe, après activation.
+**[Ouvrir le guide du configurateur →](docs/CONFIGURATEUR.md)** · Page statique locale : aucun compte, aucune télémétrie, aucune commande exécutée par le navigateur. L'hébergement GitHub Pages pourra fournir ensuite une URL directe, après activation. 
+
+### Choisir son moteur directement dans GitHub
+
+Ces menus natifs sont utilisables **sans quitter le README**. Ils proposent des commandes inspectables et prêtes à copier. Pour le choix croisé **moteur × OS × quantification** avec boutons *Copier*, utiliser la [page interactive](docs/CONFIGURATEUR.md).
+
+<details>
+<summary><strong>🟢 Kali-Lite Qwen3 8B — version stable (Linux / macOS)</strong></summary>
+
+**Linux** — vérification SHA-256, simulation, puis installation volontaire :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-qwen"
+cd "$HOME/kali-lite-qwen"
+sha256sum --check SHA256SUMS
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-qwen"
+sudo bash auto-install-kali-lite-v1-novision.sh
+ollama run kali-lite
+```
+
+**macOS** — Homebrew requis, ne pas utiliser `sudo` :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-qwen"
+cd "$HOME/kali-lite-qwen"
+shasum -a 256 -c SHA256SUMS
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-qwen"
+bash auto-install-kali-lite-v1-novision.sh
+ollama run kali-lite
+```
+
+</details>
+
+<details>
+<summary><strong>🟢 Kali-Lite Vision Qwen3.5 9B — version stable (Linux / macOS)</strong></summary>
+
+**Linux** :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-vision"
+cd "$HOME/kali-lite-vision"
+sha256sum --check SHA256SUMS
+bash auto-install-kali-lite-v2-vision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-vision"
+sudo bash auto-install-kali-lite-v2-vision.sh
+ollama run kali-lite-v2
+```
+
+**macOS** — Homebrew requis, sans `sudo` :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-vision"
+cd "$HOME/kali-lite-vision"
+shasum -a 256 -c SHA256SUMS
+bash auto-install-kali-lite-v2-vision.sh --dry-run
+```
+
+**Si le rapport est conforme et après lecture du script, exécuter séparément :**
+
+```bash
+cd "$HOME/kali-lite-vision"
+bash auto-install-kali-lite-v2-vision.sh
+ollama run kali-lite-v2
+```
+
+</details>
+
+<details>
+<summary><strong>🧪 Kali-Lite Mistral 7B — expérimental (Q4 / Q8)</strong></summary>
+
+**Linux ou macOS :** Ollama doit être installé et démarré localement. Aucun `sudo` dans les recettes expérimentales.
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-mistral"
+cd "$HOME/kali-lite-mistral"
+```
+
+**Q4_K_M**, plus léger :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run mistral-7b q4
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull mistral:7b-instruct-v0.3-q4_K_M
+bash scripts/kali-lite-quant.sh --create mistral-7b q4
+ollama run kali-lite-mistral-7b-q4
+```
+
+**Q8_0**, plus gourmand en RAM et VRAM :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run mistral-7b q8
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull mistral:7b-instruct-v0.3-q8_0
+bash scripts/kali-lite-quant.sh --create mistral-7b q8
+ollama run kali-lite-mistral-7b-q8
+```
+
+</details>
+
+<details>
+<summary><strong>🧪 Kali-Lite OLMo 3 7B — expérimental (Q4 / Q8)</strong></summary>
+
+**Linux ou macOS :** Ollama doit être installé et démarré localement.
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-olmo"
+cd "$HOME/kali-lite-olmo"
+```
+
+**Q4_K_M** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run olmo3-7b q4
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull olmo-3:7b-instruct-q4_K_M
+bash scripts/kali-lite-quant.sh --create olmo3-7b q4
+ollama run kali-lite-olmo3-7b-q4
+```
+
+**Q8_0** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run olmo3-7b q8
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull olmo-3:7b-instruct-q8_0
+bash scripts/kali-lite-quant.sh --create olmo3-7b q8
+ollama run kali-lite-olmo3-7b-q8
+```
+
+</details>
+
+<details>
+<summary><strong>🧪 Kali-Lite Gemma 4 E2B — expérimental, Vision (Q4 / Q8)</strong></summary>
+
+**Linux ou macOS :** Ollama doit être installé et démarré localement. La vision de cette variante reste à qualifier.
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-gemma"
+cd "$HOME/kali-lite-gemma"
+```
+
+**Q4_K_M** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run gemma4-e2b q4
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull gemma4:e2b-it-q4_K_M
+bash scripts/kali-lite-quant.sh --create gemma4-e2b q4
+ollama run kali-lite-gemma4-e2b-q4
+```
+
+**Q8_0** :
+
+```bash
+bash scripts/kali-lite-quant.sh --dry-run gemma4-e2b q8
+```
+
+**Après validation de la simulation, télécharger et créer explicitement :**
+
+```bash
+ollama pull gemma4:e2b-it-q8_0
+bash scripts/kali-lite-quant.sh --create gemma4-e2b q8
+ollama run kali-lite-gemma4-e2b-q8
+```
+
+</details>
+
+<details>
+<summary><strong>🪟 Windows — Ubuntu sous WSL2 (pilote non validé)</strong></summary>
+
+Il n'existe **pas d'installateur Windows natif** dans ce dépôt. Pour tester sur un environnement Windows non critique :
+
+**PowerShell administrateur** :
+
+```powershell
+wsl --install -d Ubuntu
+wsl --update
+wsl --list --verbose
+```
+
+Puis, après redémarrage éventuel et vérification de WSL2, ouvrir le terminal **Ubuntu sous WSL2**. Suivre le [guide d'installation WSL2](docs/WINDOWS-WSL2.md), installer un Ollama Linux dans WSL2 selon les recommandations officielles et utiliser l'un des parcours Linux ci-dessus seulement après `--dry-run`. **Aucune qualification WSL2 CPU/GPU n'est encore revendiquée.**
+
+</details>
+
+> **Avant exécution :** les recettes peuvent télécharger plusieurs Go et modifier la machine. Vérifier la provenance, la RAM/VRAM disponible, la licence amont et chaque commande. Le fichier `SHA256SUMS` atteste la cohérence de fichiers dans le dépôt, **pas** une signature d'éditeur.
+
+
 
 ---
 
