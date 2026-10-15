@@ -933,7 +933,7 @@ dans un prompt, un Modelfile ou un fichier versionné.
 
 Pour signaler une vulnérabilité :
 
-**security@kalicorp.fr**
+**kalicorp@proton.me**
 
 Voir [`SECURITY.md`](SECURITY.md).
 
@@ -957,7 +957,7 @@ Toute modification d'un installateur modifie son empreinte.
 # Support et contribution
 
 - **Bugs et demandes** : utiliser les Issues GitHub du dépôt.
-- **Sécurité** : `security@kalicorp.fr`
+- **Sécurité** : `kalicorp@proton.me`
 - **Personnalisation** : consulter le Modelfile et [`MODEL-CARD.md`](MODEL-CARD.md).
 - **Architecture** : consulter [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Principes du projet** : consulter [`docs/WHY-KALI-LITE.md`](docs/WHY-KALI-LITE.md).
