@@ -1,0 +1,6 @@
+# Fins de ligne LF fiables après un git clone depuis Windows.
+*.sh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf

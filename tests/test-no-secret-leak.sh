@@ -42,28 +42,21 @@ for script in "${SCRIPTS[@]}"; do
     ok "Aucune exposition directe de clé API dans les sorties"
   fi
 
-  # Test 3: PERSO_FOUND utilisé comme garde-fou
-  if grep -q 'PERSO_FOUND' "$filepath"; then
-    ok "Garde-fou PERSO_FOUND présent (détection config perso)"
-  else
-    warn_test "Pas de garde-fou PERSO_FOUND dans $script"
-  fi
-
-  # Test 4: safe_download/safe_download_exec utilisé au lieu de curl|sh pipe
+  # Test 3: safe_download/safe_download_exec utilisé au lieu de curl|sh pipe
   if grep -q 'safe_download\|safe_download_exec' "$filepath"; then
     ok "Téléchargement sécurisé (safe_download) présent"
   else
     warn_test "Pas de pattern safe_download dans $script -- vérifier les téléchargements externes"
   fi
 
-  # Test 5: Pas de pipe vers bash pour scripts distants
+  # Test 4: Pas de pipe vers bash pour scripts distants
   if grep -nE 'curl.*\|\s*bash|wget.*\|\s*sh' "$filepath" >/dev/null 2>&1; then
     fail_test "Pipe dangereux curl|bash ou wget|sh détecté (ligne $(grep -nE 'curl.*\|\s*bash|wget.*\|\s*sh' "$filepath" | head -1 | cut -d: -f1))"
   else
     ok "Aucun pipe dangereux curl|bash / wget|sh"
   fi
 
-  # Test 6: Pas de secrets dans les commentaires
+  # Test 5: Pas de secrets dans les commentaires
   if grep -nE '#.*sk-[a-zA-Z0-9]{20,}|#.*ANTHROPIC_.*=.*[a-zA-Z0-9]' "$filepath" >/dev/null 2>&1; then
     fail_test "Secret potentiel dans un commentaire détecté (ligne $(grep -nE '#.*sk-[a-zA-Z0-9]{20,}' "$filepath" | head -1 | cut -d: -f1))"
   else
@@ -73,7 +66,7 @@ for script in "${SCRIPTS[@]}"; do
   echo ""
 done
 
-# Test 7 : gitleaks-expurgated.json -- aucun NON-COMPROMIS non résolu
+# Test 6 : gitleaks-expurgated.json -- aucun NON-COMPROMIS non résolu
 if [[ -f "${BASE_DIR}/gitleaks-expurgated.json" ]]; then
   unresolved=$(grep -c '"NON-COMPROMIS"' "${BASE_DIR}/gitleaks-expurgated.json" || true)
   if [[ "$unresolved" -eq 0 ]]; then

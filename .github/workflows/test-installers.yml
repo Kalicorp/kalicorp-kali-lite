@@ -79,6 +79,9 @@ jobs:
             tests/test_pid_fidelity.sh
             tests/test_dry_run.sh
             tests/test-no-secret-leak.sh
+          for script in scripts/*.sh tests/test_wsl2_diagnostic.sh; do
+            bash -n "$script"
+          done
           )
 
           for script in "${scripts[@]}"; do
@@ -109,6 +112,12 @@ jobs:
             tests/test_dry_run.sh \
             tests/test-no-secret-leak.sh
 
+      - name: ShellCheck warnings for utility scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          shellcheck --severity=warning scripts/*.sh tests/test_wsl2_diagnostic.sh
+
 
   repository-invariants:
     name: Repository structure & invariants
@@ -130,6 +139,18 @@ jobs:
         run: |
           set -euo pipefail
           bash tests/test_pid_fidelity.sh
+
+      - name: Check synchronized Modelfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_modelfile_sync.py
+
+      - name: Validate WSL2 diagnostics offline with mock commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/test_wsl2_diagnostic.sh
 
 
   checksum-verification:
