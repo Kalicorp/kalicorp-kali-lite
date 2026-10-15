@@ -79,12 +79,9 @@ jobs:
             tests/test_pid_fidelity.sh
             tests/test_dry_run.sh
             tests/test-no-secret-leak.sh
-          for script in scripts/*.sh tests/test_wsl2_diagnostic.sh; do
-            bash -n "$script"
-          done
           )
 
-          for script in "${scripts[@]}"; do
+          for script in "${scripts[@]}" scripts/*.sh tests/test_wsl2_diagnostic.sh; do
             echo "Checking syntax: $script"
             bash -n "$script"
           done
