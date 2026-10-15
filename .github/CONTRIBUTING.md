@@ -381,7 +381,7 @@ Consultez :
 ou contactez :
 
 ```text
-security@kalicorp.fr
+kalicorp@proton.me
 ```
 
 ---

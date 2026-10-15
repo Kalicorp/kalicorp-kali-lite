@@ -4,36 +4,116 @@
 
 # Kali-Lite
 
-### L'intelligence artificielle locale, sans dépendance à un service d'inférence.
+### Une IA locale, gratuite et sous votre contrôle.
 
-**Choisissez un moteur. Gardez la maîtrise de la machine, des données et du contexte.**
+**Choisissez votre moteur. Gardez la maîtrise de votre ordinateur, de vos données et de votre contexte.**
 
-[![Ollama](https://img.shields.io/badge/Ollama-Local-25bea7?style=for-the-badge&logo=ollama)](https://ollama.com)
-[![Licence](https://img.shields.io/badge/Licence-GPL--2.0--only-eaa46b?style=for-the-badge)](LICENSE)
-[![Systèmes](https://img.shields.io/badge/Linux%20%7C%20macOS-Supportés-425e76?style=for-the-badge)](#-installation)
-[![Windows](https://img.shields.io/badge/Windows%20WSL2-Pilote%20non%20validé-746247?style=for-the-badge)](docs/WINDOWS-WSL2.md)
+[![Local](https://img.shields.io/badge/Inférence-Locale-25bea7?style=flat-square)](https://ollama.com)
+[![Licence](https://img.shields.io/badge/Licence-GPL--2.0--only-eaa46b?style=flat-square)](LICENSE)
+[![Linux / macOS](https://img.shields.io/badge/Linux%20%7C%20macOS-Parcours%20documentés-425e76?style=flat-square)](#installation)
+[![RTX 4090](https://img.shields.io/badge/RTX%204090-18%2F18%20tests%20GPU-377657?style=flat-square)](docs/BENCHMARKS.md)
+[![Windows](https://img.shields.io/badge/Windows%20WSL2-Pilote%20à%20valider-746247?style=flat-square)](docs/WINDOWS-WSL2.md)
 
-**[🧭 Composer mon installation](docs/CONFIGURATEUR.md)** · **[⚡ Installation rapide](#installation)** · **[🔌 Hermes Agent CLI](docs/HERMES-AGENT.md)** · **[📊 Résultats GPU](docs/BENCHMARKS.md)** · **[🗺️ Roadmap](#roadmap)**
+**[🚀 Installer](#installation)** · **[🧭 Choisir un modèle](#choisir-son-modele)** · **[🖥️ GPU testé](#materiel-teste)** · **[🪟 Windows / WSL2](docs/WINDOWS-WSL2.md)** · **[📚 Documentation](#documentation)**
 
 </div>
 
-> **Kali-Lite, ce n'est pas un modèle unique :** c'est une identité logicielle locale, une doctrine et des profils interchangeables, exécutés sous le contrôle de leur opérateur.
+> **En bref :** Kali-Lite n'est pas un modèle entraîné de zéro par Kalicorp. C'est une **famille de configurations locales** : modèles de base interchangeables, doctrine Kalicorp, spécialités et outils, sous le contrôle de l'utilisateur. L'inférence locale ne nécessite ni compte Kalicorp ni abonnement d'inférence.
 
-## 🚀 En quelques clics
+---
 
-| Étape | Vous choisissez | Kali-Lite prépare |
-|---|---|---|
-| **1 · Moteur** | Qwen3 8B, Qwen3.5 Vision, Mistral 7B, OLMo 3 7B, Gemma 4 E2B | Profil stable ou laboratoire |
-| **2 · Système** | Linux, macOS ou Windows via WSL2 (pilote) | Commandes adaptées au terminal |
-| **3 · Quantification** | Q4_K_M ou Q8_0 pour les variantes du laboratoire | Pull explicite et tag Ollama distinct |
+<a id="choisir-son-modele"></a>
 
-**[Ouvrir le guide du configurateur →](docs/CONFIGURATEUR.md)** · Page statique locale : aucun compte, aucune télémétrie, aucune commande exécutée par le navigateur. L'hébergement GitHub Pages pourra fournir ensuite une URL directe, après activation.
+## 🧭 1. Quel Kali-Lite choisir ?
 
-**Déjà utilisateur d'Hermes Agent CLI ?** [Connecter Kali-Lite à Hermes via Ollama →](docs/HERMES-AGENT.md) — passerelle documentée, tests agentiques 64K et appels d'outils encore en attente. 
+**Vous débutez ?** Commencez par **Qwen3 8B**, le profil texte de référence. Pour analyser des images, choisissez **Qwen3.5 9B Vision**. Les autres profils sont des variantes expérimentales.
 
-### Choisir son moteur directement dans GitHub
+| Votre besoin | Modèle / profil | Statut | Ressources / remarques |
+|---|---|---|---|
+| 💬 **Discuter, coder, travailler en local** | **Kali-Lite — Qwen3 8B** | 🟢 Référence | ~8 Go de VRAM cible ; 16 Go de RAM conseillés |
+| 👁️ **Comprendre aussi des images** | **Kali-Lite v2 — Qwen3.5 9B** | 🟢 Référence Vision | ~10 Go de mémoire GPU indicative ; 32 Go de RAM recommandés |
+| 🧪 **Essayer un autre moteur** | Mistral 7B | Laboratoire Q4 / Q8 | [Mesures GPU](docs/BENCHMARKS.md) |
+| 🧪 **Essayer un modèle ouvert alternatif** | OLMo 3 7B | Laboratoire Q4 / Q8 | [Mesures GPU](docs/BENCHMARKS.md) |
+| 🧪 **Tester une variante légère** | Gemma 4 E2B | Laboratoire Q4 / Q8 | Vision à qualifier séparément |
 
-Ces menus natifs sont utilisables **sans quitter le README**. Ils proposent des commandes inspectables et prêtes à copier. Pour le choix croisé **moteur × OS × quantification** avec boutons *Copier*, utiliser la [page interactive](docs/CONFIGURATEUR.md).
+Les tailles de téléchargement sont indicatives : **Qwen3 8B ~5,2 Go**, **Qwen3.5 9B ~6,8 Go**. La mémoire réellement nécessaire varie avec la quantification, le contexte, le système et les tâches. Un GPU n'est pas obligatoire, mais une inférence CPU peut être lente.
+
+**Systèmes :** Linux et macOS disposent de parcours documentés. Sous **Windows, seul Ubuntu via WSL2 est proposé en phase pilote**, sans validation matérielle réelle revendiquée.
+
+**[🧭 Configurateur moteur × OS × quantification](docs/CONFIGURATEUR.md)** · **[📋 Toutes les commandes par modèle](#recettes-par-modele)**
+
+---
+
+<a id="installation"></a>
+
+## ⚡ 2. Installation rapide — Linux / Qwen3 8B
+
+**Étape 1 — Télécharger, vérifier et prévisualiser.** Copier ces commandes dans un terminal Linux :
+
+```bash
+git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite"
+cd "$HOME/kali-lite"
+sha256sum --check SHA256SUMS
+less auto-install-kali-lite-v1-novision.sh
+bash auto-install-kali-lite-v1-novision.sh --dry-run
+```
+
+**Étape 2 — Installer uniquement après avoir vérifié le script et le résultat du dry-run :**
+
+```bash
+sudo bash auto-install-kali-lite-v1-novision.sh
+ollama run kali-lite
+```
+
+> Les installateurs peuvent télécharger Ollama et plusieurs Go de modèles, et modifier le système. **Aucun `curl | bash` direct n'est recommandé.** Les empreintes `SHA256SUMS` vérifient la cohérence des fichiers téléchargés, **pas** l'authenticité d'un dépôt compromis.
+
+**Vous utilisez macOS, Qwen Vision, Mistral, OLMo ou Gemma ?** Ouvrez uniquement le menu correspondant dans les [recettes ci-dessous](#recettes-par-modele), ou consultez le [guide complet](INSTALLATION.md). Sur macOS, les installateurs stables ne doivent pas être lancés avec `sudo`.
+
+**Vous utilisez Windows ?** [Parcours Ubuntu / WSL2 (pilote)](docs/WINDOWS-WSL2.md) · [Formulaire de retour d'essai](.github/ISSUE_TEMPLATE/wsl2_test_report.md).
+
+---
+
+## ✅ 3. GPU validé en laboratoire : NVIDIA RTX 4090 (24 Go)
+
+**Le 14 octobre 2026**, sur une machine Ubuntu avec RTX 4090 et Ollama local, Kalicorp a exécuté les variantes **Mistral 7B, OLMo 3 7B et Gemma 4 E2B**, chacune en **Q4 et Q8**.
+
+| Mesure | Résultat observé |
+|---|---|
+| GPU | **NVIDIA GeForce RTX 4090 — 24 Go** |
+| Profils exécutés | **6** (3 moteurs × 2 quantifications) |
+| Tests courts / heuristiques | **18 réussis sur 18** (3 par profil) |
+| Ollama serveur | **0.40.4**, instance de laboratoire |
+| Système / date | Ubuntu 26 · **14 octobre 2026** |
+
+**✅ Validation :** inférence GPU effectivement exécutée sur la RTX 4090 pour ces six profils. **⚠️ Limites :** ce n'est pas une certification de performances, de production, de Vision ou de compatibilité Windows. Les VRAM et débits détaillés figurent dans la documentation.
+
+**[📊 Voir les mesures RTX 4090 et les limites](docs/BENCHMARKS.md)** · **[🖥️ Voir tout le matériel référencé](#materiel-teste)**
+
+<details>
+<summary><strong>Voir les tests Q4 et Q8 et leurs limites</strong></summary>
+
+| Variante | Test RTX 4090 | VRAM de processus observée |
+|---|:---:|---:|
+| Mistral 7B Q4 | 3/3 | 4 912 MiB |
+| Mistral 7B Q8 | 3/3 | 8 282 MiB |
+| OLMo 3 7B Q4 | 3/3 | 5 612 MiB |
+| OLMo 3 7B Q8 | 3/3 | 9 580 MiB |
+| Gemma 4 E2B Q4 | 3/3 | 3 378 MiB |
+| Gemma 4 E2B Q8 | 3/3 | 4 122 MiB |
+
+Les premiers Q4 Mistral/OLMo ont été testés avec `num_ctx=2048`, les Q8 avec `4096`. Les tâches étaient courtes. Le premier débit Gemma Q8 (~0,2 tok/s) reste à investiguer.
+
+**[Méthode, métriques et limites de qualification →](docs/BENCHMARKS.md)**
+
+</details>
+
+---
+
+<a id="recettes-par-modele"></a>
+
+## 📋 4. Toutes les commandes — ouvrez seulement votre modèle
+
+Les versions de référence utilisent les installateurs depuis `main`. Les profils **Mistral, OLMo et Gemma** restent en laboratoire, avec recettes sur `projet-x` et téléchargement explicite. Les menus suivants évitent de mélanger Linux, macOS et Windows.
 
 <details>
 <summary><strong>🟢 Kali-Lite Qwen3 8B — version stable (Linux / macOS)</strong></summary>
@@ -268,9 +348,7 @@ Puis, après redémarrage éventuel et vérification de WSL2, ouvrir le terminal
 
 </details>
 
-> **Avant exécution :** les recettes peuvent télécharger plusieurs Go et modifier la machine. Vérifier la provenance, la RAM/VRAM disponible, la licence amont et chaque commande. Le fichier `SHA256SUMS` atteste la cohérence de fichiers dans le dépôt, **pas** une signature d'éditeur.
-
-
+> **Avant exécution :** les recettes peuvent télécharger plusieurs Go et modifier la machine. Vérifier la provenance, la RAM/VRAM disponible, la licence amont et chaque commande. `SHA256SUMS` n'est pas une signature d'éditeur.
 
 ---
 
@@ -295,96 +373,6 @@ La famille repose sur quatre couches séparables :
 4. **harnais d'exécution**.
 
 Cette séparation permet d'adapter une Anima, de remplacer certaines briques ou de faire évoluer le modèle de base sans devoir reconstruire toute l'architecture.
-
-### Versions disponibles
-
-| Version | Modèle de base | VRAM indicative | Vision | Cas d'usage | Taille indicative |
-|---|---|---:|:---:|---|---:|
-| **Kali-Lite** | Qwen3 8B | ~8 Go | ❌ | Chat, code, assistance système | ~5,2 Go |
-| **Kali-Lite v2** | Qwen3.5 9B Vision | ~10 Go | ✅ | Images, chat, code | ~6,8 Go |
-
-> Les besoins réels dépendent notamment de la quantification, du contexte utilisé, du runtime, du système d'exploitation et de la mémoire disponible.
-
-### Laboratoire multi-modèles (branche `projet-x`)
-
-| Moteur expérimental | Profil | Vision |
-|---|---|:---:|
-| **Mistral 7B** | `mistral-7b` | Non |
-| **OLMo 3 7B** | `olmo3-7b` | Non |
-| **Gemma 4 E2B** | `gemma4-e2b` | Oui (selon runtime) |
-
-**Campagne RTX 4090 du 14 octobre 2026 : 6 configurations Q4/Q8, 18/18 smoke tests heuristiques réussis.** C'est une validation d'exécution GPU et de premiers comportements, **pas** une certification de performances ni de conformité. Qwen3 et Qwen3.5 restent les profils de référence.
-
-<details>
-<summary><strong>Voir les tests Q4 et Q8 et leurs limites</strong></summary>
-
-| Variante | Test RTX 4090 | VRAM de processus observée |
-|---|:---:|---:|
-| Mistral 7B Q4 | 3/3 | 4 912 MiB |
-| Mistral 7B Q8 | 3/3 | 8 282 MiB |
-| OLMo 3 7B Q4 | 3/3 | 5 612 MiB |
-| OLMo 3 7B Q8 | 3/3 | 9 580 MiB |
-| Gemma 4 E2B Q4 | 3/3 | 3 378 MiB |
-| Gemma 4 E2B Q8 | 3/3 | 4 122 MiB |
-
-Les premiers Q4 Mistral/OLMo ont été testés avec `num_ctx=2048`, les Q8 avec `4096`. Les tâches étaient courtes. Le premier débit Gemma Q8 (~0,2 tok/s) reste à investiguer.
-
-**[Méthode, métriques et limites de qualification →](docs/BENCHMARKS.md)**
-
-</details>
-
-**[Recettes Q4/Q8](docs/QUANTIZATIONS.md)** · **[Profils disponibles](docs/VARIANTS-LAB.md)**
-
-
----
-
-<a id="installation"></a>
-
-## ⚡ Installation
-
-**Un moteur + un système = les commandes adaptées.** Le [configurateur](docs/CONFIGURATEUR.md) les prépare dans le navigateur sans exécution ni collecte de données. Retrouvez aussi le [guide détaillé](INSTALLATION.md).
-
-<details open>
-<summary><strong>Exemple : installer Kali-Lite Qwen3 8B sur Linux</strong></summary>
-
-Commencer par récupérer le dépôt stable, vérifier les empreintes publiées et lancer une simulation :
-
-```bash
-git clone --depth 1 --branch main https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite"
-cd "$HOME/kali-lite"
-sha256sum --check SHA256SUMS
-bash auto-install-kali-lite-v1-novision.sh --dry-run
-```
-
-**Après lecture de l'intégralité du script et validation du dry-run seulement :**
-
-```bash
-cd "$HOME/kali-lite"
-sudo bash auto-install-kali-lite-v1-novision.sh
-ollama run kali-lite
-```
-
-Le fichier `SHA256SUMS` n'est pas une signature de l'éditeur ; il ne protège pas contre un dépôt compromis.
-
-</details>
-
-<details>
-<summary><strong>Autres choix : Qwen Vision, Mistral, OLMo, Gemma, macOS et WSL2</strong></summary>
-
-Le [configurateur d'installation](docs/CONFIGURATEUR.md) prend en charge les cinq moteurs et prépare les commandes spécifiques. **Windows** se fait seulement via Ubuntu sous **WSL2**, toujours en phase pilote non certifiée ; il n'existe pas de script d'installation Windows natif.
-
-Pour ouvrir la page localement après avoir récupéré `projet-x` :
-
-```bash
-git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git "$HOME/kali-lite-config"
-cd "$HOME/kali-lite-config"
-python3 -m http.server 8765 --bind 127.0.0.1 --directory docs
-```
-
-Ouvrir `http://127.0.0.1:8765` dans un navigateur, puis choisir le modèle et le système. Arrêter ce petit serveur local avec `Ctrl+C`.
-
-</details>
-
 
 ---
 
@@ -428,15 +416,22 @@ La conformité dépend notamment :
 
 ---
 
+<a id="materiel-teste"></a>
+
 ## 🖥️ Matériel testé
 
-| Configuration | Statut |
-|---|:---:|
-| RTX 3080 8 Go | ✅ |
-| RTX 4070 | ✅ |
-| Apple Silicon M1 / M2 / M3 | ✅ |
-| Kali Linux / Ubuntu | ✅ |
-| macOS 11+ | ✅ |
+**RTX 4090 : validation GPU documentée dans le laboratoire Kali-Lite.** Les anciens matériels ci-dessous figuraient déjà dans les retours du projet, mais leur protocole détaillé n'est pas publié à ce stade.
+
+| Configuration | État des informations disponibles |
+|---|---|
+| **NVIDIA GeForce RTX 4090 — 24 Go** | ✅ **Tests GPU réalisés le 14/10/2026 :** Mistral 7B, OLMo 3 7B et Gemma 4 E2B en Q4/Q8 — **18/18 heuristiques** réussies. [Mesures et limites](docs/BENCHMARKS.md) |
+| RTX 3080 8 Go | Signalée comme testée historiquement ; version du modèle et protocole à préciser |
+| RTX 4070 | Signalée comme testée historiquement ; détails à compléter |
+| Apple Silicon M1 / M2 / M3 | Environnements mentionnés comme testés ; configurations à documenter |
+| Kali Linux / Ubuntu | Parcours Linux documenté |
+| macOS 11+ | Parcours macOS documenté |
+
+> **Ce qui est validé sur RTX 4090 :** des générations GPU courtes sur les **six variantes expérimentales**. **Non validé par ces mesures :** le fonctionnement WSL2, l'ensemble des configurations Qwen, la Vision sur images, la génération longue et la comparaison de performances à paramètres identiques.
 
 ### Ressources indicatives
 
@@ -548,6 +543,8 @@ Quelques principes :
 
 ---
 
+<a id="documentation"></a>
+
 ## 📚 Documentation
 
 | Fichier | Description |
@@ -619,6 +616,6 @@ Copyright © 2026 Kalicorp.
 
 IA locale • souveraineté • frugalité • maîtrise de l'infrastructure
 
-[site.kalicorp.fr](https://site.kalicorp.fr)
+[site.kalicorp.fr](https://site.kalicorp.fr) · Contact : [kalicorp@proton.me](mailto:kalicorp@proton.me)
 
 </div>
