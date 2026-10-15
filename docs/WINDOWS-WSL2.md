@@ -39,7 +39,7 @@ Ce diagnostic est non destructif et n'installe aucun modèle. Pour aller plus lo
 
 Les retours de test réussis et échoués sont bienvenus : partager version Windows, sortie de `wsl -l -v`, CPU/GPU, RAM, disque, version Ollama dans **Ubuntu WSL2**, variante et résultat réel (y compris après un redémarrage).
 
-[**Gabarit officiel de retour WSL2 sur GitHub Issues**](https://github.com/Kalicorp/kalicorp-kali-lite/issues/new?template=wsl2_test_report.md).
+[**Consulter le gabarit de retour WSL2 sur la branche pilote**](https://github.com/Kalicorp/kalicorp-kali-lite/blob/projet-x/.github/ISSUE_TEMPLATE/wsl2_test_report.md). Tant que ce gabarit n'est pas fusionné sur la branche par défaut, il faut en copier les rubriques dans un [nouveau ticket GitHub](https://github.com/Kalicorp/kalicorp-kali-lite/issues/new) ou dans son retour de test ; GitHub ne le propose pas encore automatiquement.
 
 Masquer avant publication les noms d'utilisateurs et de machines, chemins personnels, IP, tokens et données privées. Relire les captures et les journaux avant de les partager.
 
