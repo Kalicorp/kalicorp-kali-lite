@@ -23,7 +23,25 @@ uname -r
 bash scripts/check-wsl2.sh
 ```
 
-Le diagnostic ne télécharge rien et ne configure pas le réseau. Il vérifie le noyau WSL2, la disponibilité du CLI Ollama et l'exposition éventuelle d'un GPU NVIDIA.
+Le diagnostic ne télécharge rien et ne modifie pas le réseau. Il vérifie WSL2, le CLI Ollama, la visibilité NVIDIA, la RAM, le disque et l'API Ollama **locale sur 127.0.0.1**. Il ne démontre ni l'absence d'Internet, ni l'accélération GPU effective.
+
+## Campagne communautaire Windows / WSL2
+
+Sur la branche pilote `projet-x`, récupérer les scripts avant de les inspecter :
+
+```bash
+git clone --depth 1 --branch projet-x https://github.com/Kalicorp/kalicorp-kali-lite.git
+cd kalicorp-kali-lite
+bash scripts/check-wsl2.sh
+```
+
+Ce diagnostic est non destructif et n'installe aucun modèle. Pour aller plus loin, suivre la procédure du README : vérifier `SHA256SUMS`, lire les scripts et utiliser `--dry-run` avant toute installation réelle. **Pas de `curl | bash`.**
+
+Les retours de test réussis et échoués sont bienvenus : partager version Windows, sortie de `wsl -l -v`, CPU/GPU, RAM, disque, version Ollama dans **Ubuntu WSL2**, variante et résultat réel (y compris après un redémarrage).
+
+[**Consulter le gabarit de retour WSL2 sur la branche pilote**](https://github.com/Kalicorp/kalicorp-kali-lite/blob/projet-x/.github/ISSUE_TEMPLATE/wsl2_test_report.md). Tant que ce gabarit n'est pas fusionné sur la branche par défaut, il faut en copier les rubriques dans un [nouveau ticket GitHub](https://github.com/Kalicorp/kalicorp-kali-lite/issues/new) ou dans son retour de test ; GitHub ne le propose pas encore automatiquement.
+
+Masquer avant publication les noms d'utilisateurs et de machines, chemins personnels, IP, tokens et données privées. Relire les captures et les journaux avant de les partager.
 
 ## Ollama
 

@@ -2,7 +2,8 @@
 # Laboratoire Kali-Lite : aucun téléchargement ni élévation de privilèges implicite.
 set -euo pipefail
 
-readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT
 
 usage() {
   cat <<'HELP'

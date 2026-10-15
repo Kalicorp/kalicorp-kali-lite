@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Sélection explicite de quantifications Ollama amont, sans pull ni sudo implicite.
 set -euo pipefail
-readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT
 
 usage() {
   cat <<'HELP'
