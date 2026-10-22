@@ -8,7 +8,7 @@ QUESTION="${2:-}"
 if [[ ! -f "$SOURCES" ]]; then
   echo "Aucune source à : $SOURCES" >&2
   echo "Créer data/sources.jsonl à partir de sources réelles et vérifiées." >&2
-  echo "Pour une simulation seulement : bash start.sh examples/sources.demo.jsonl" >&2
+  echo "Simulation hors ligne : python3 workflow.py run --sources examples/sources.demo.jsonl --question Test --dry-run" >&2
   exit 2
 fi
 
