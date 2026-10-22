@@ -1,0 +1,72 @@
+[
+  {
+    "id": "AMP-001",
+    "nom_français": "Amygdaline",
+    "nom_scientifique": "AMYGDALIN",
+    "source_plante": "Prunus amygdalus",
+    "type_chimique": "Glycoside cyanogénique",
+    "cibles_cancéreuses": [
+      "p53",
+      "BCL-2",
+      "EGFR"
+    ],
+    "ic50_estimee": 15.2,
+    "unité_ic50": "µM",
+    "structure_moleculaire": {
+      "mol": "C15H12O4N4",
+      "formulae": [
+        "C15H12O4N4"
+      ],
+      "pdb_id": null
+    },
+    "source_inpacdb": true,
+    "poids_moleculaire_estime": 43.024,
+    "longueur_formule": 10
+  },
+  {
+    "id": "AMP-002",
+    "nom_français": "Prunasin",
+    "nom_scientifique": "PRUNASIN",
+    "source_plante": "Prunus avium",
+    "type_chimique": "Glycoside cyanogénique",
+    "cibles_cancéreuses": [
+      "p53",
+      "BCL-2"
+    ],
+    "ic50_estimee": 28.5,
+    "unité_ic50": "µM",
+    "structure_moleculaire": {
+      "mol": "C14H10O4N2",
+      "formulae": [
+        "C14H10O4N2"
+      ],
+      "pdb_id": null
+    },
+    "source_inpacdb": true,
+    "poids_moleculaire_estime": 43.024,
+    "longueur_formule": 10
+  },
+  {
+    "id": "AMP-003",
+    "nom_français": "Dhurrin",
+    "nom_scientifique": "DHURRIN",
+    "source_plante": "Prunus persica",
+    "type_chimique": "Glycoside cyanogénique",
+    "cibles_cancéreuses": [
+      "p53",
+      "EGFR"
+    ],
+    "ic50_estimee": 22.1,
+    "unité_ic50": "µM",
+    "structure_moleculaire": {
+      "mol": "C14H10O4N2",
+      "formulae": [
+        "C14H10O4N2"
+      ],
+      "pdb_id": null
+    },
+    "source_inpacdb": true,
+    "poids_moleculaire_estime": 43.024,
+    "longueur_formule": 10
+  }
+]
