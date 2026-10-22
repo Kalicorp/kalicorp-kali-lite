@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - "feat/hydrangea-research-workflow-20261022"
+      - "fix/hydrangea-provenance-pipeline-20261022"
     paths:
       - "projects/hydrangea-research/**"
       - ".github/workflows/hydrangea-research.yml"
@@ -34,6 +35,7 @@ jobs:
         run: |
           python workflow.py --help
           python assay_pipeline.py --help
+          python compound_normalizer.py --help
       - name: Offline example and launcher shell syntax
         run: |
           bash -n start.sh
@@ -43,3 +45,24 @@ jobs:
         run: |
           echo "CI uses only synthetic in-memory/temporary fixtures."
           echo "Real data and locally hosted models never leave the local operator machine."
+
+  chemical-identity-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: projects/hydrangea-research
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install RDKit only (no private data, no remote AI)
+        run: python -m pip install "rdkit>=2024.9,<2027"
+      - name: Run all safety tests, including actual RDKit parsing
+        run: python -m unittest discover -s tests -v
+      - name: Reject legacy fictitious molecule and produce valid synthetic output
+        run: |
+          python compound_normalizer.py validate --input examples/compound.demo.jsonl
+          python compound_normalizer.py normalize --input examples/compound.demo.jsonl --out artifacts/ci-structures
+          python -c "import json; p=json.load(open('artifacts/ci-structures/manifest.json')); assert p['compound_count']==2 and 'NOT_SCIENTIFICALLY_VERIFIED' in p['status']"
