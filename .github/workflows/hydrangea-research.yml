@@ -1,0 +1,40 @@
+name: Hydrangea research contracts
+
+on:
+  pull_request:
+    paths:
+      - "projects/hydrangea-research/**"
+      - ".github/workflows/hydrangea-research.yml"
+  push:
+    branches:
+      - "feat/hydrangea-research-workflow-20261022"
+    paths:
+      - "projects/hydrangea-research/**"
+      - ".github/workflows/hydrangea-research.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: projects/hydrangea-research
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Offline unit and safety contract tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate CLI usage
+        run: |
+          python workflow.py --help
+          python assay_pipeline.py --help
+      - name: Confirm no private model or scientific input is fetched
+        run: |
+          echo "CI uses only synthetic in-memory/temporary fixtures."
+          echo "Real data and locally hosted models never leave the local operator machine."
