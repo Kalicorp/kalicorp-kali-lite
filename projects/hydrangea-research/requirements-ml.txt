@@ -1,0 +1,5 @@
+# Only needed for the optional local baseline, not for the LLM or contract tests.
+rdkit>=2024.9,<2027
+scikit-learn>=1.5,<2
+numpy>=1.26,<3
+joblib>=1.3,<2
