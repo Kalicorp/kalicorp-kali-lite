@@ -34,6 +34,11 @@ jobs:
         run: |
           python workflow.py --help
           python assay_pipeline.py --help
+      - name: Offline example and launcher shell syntax
+        run: |
+          bash -n start.sh
+          python workflow.py validate --sources examples/sources.demo.jsonl
+          python workflow.py run --sources examples/sources.demo.jsonl --question "Architecture?" --dry-run --out artifacts/ci
       - name: Confirm no private model or scientific input is fetched
         run: |
           echo "CI uses only synthetic in-memory/temporary fixtures."
