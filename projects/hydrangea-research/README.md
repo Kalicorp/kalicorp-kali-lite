@@ -35,6 +35,18 @@ python3 workflow.py run \
   --dry-run --out artifacts/demo
 ```
 
+## Branche rapide par le terminal
+
+Après avoir constitué un fichier réel `data/sources.jsonl` :
+
+```bash
+bash start.sh data/sources.jsonl
+```
+
+Le lanceur propose les modèles Ollama installés, demande le nom exact du
+modèle et la question, puis écrit un dossier de revue horodaté. Il ne permet
+pas de transfert à une API distante.
+
 ## Brancher une IA locale (aucun compte externe nécessaire)
 
 Sur le serveur qui peut joindre Ollama :
