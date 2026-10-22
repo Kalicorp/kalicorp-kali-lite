@@ -1,0 +1,10 @@
+# Private or unreviewed data: never commit.
+.env
+data/
+artifacts/
+runs/
+*.joblib
+*.pkl
+__pycache__/
+*.pyc
+.venv/
