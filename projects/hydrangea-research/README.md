@@ -19,6 +19,21 @@ expérimental.** Le travail scientifique est séparé des réponses de modèle.
    Ce résultat est EXPLORATOIRE, jamais une validation thérapeutique.
 6. **Tests CI** : tests hors ligne sans secrets, sans modèle, sans données privées.
 
+## Audit des fichiers historiques Kali-Lite (22 octobre 2026)
+
+Les quatre pièces d'origine ont été récupérées, archivées sous
+[`evidence/kali-lite-20261022/`](evidence/kali-lite-20261022/README.md)
+et figées par SHA256.
+
+**Conclusion contrôlée :** le JSON ne fournit aucune clé `bioactivité` ;
+la règle des labels de `train_classifier.py` donne `[0, 0, 0]`,
+ce qui explique un 100 % trivial pour l'arbre à feuille `label: 0`.
+Les fonctions originelles d'extraction et d'entraînement échouent en test
+isolé ; l'archive ne constitue **pas** un jeu de données scientifique.
+
+Voir le [rapport de preuve exécutable](reports/HYDRANGEA_AUDIT_001_EVIDENCE.md).
+Le pipeline actuel `workflow.py` est séparé de ces archives.
+
 ## Démarrage (Linux, depuis le dépôt)
 
 ```bash
@@ -34,6 +49,18 @@ python3 workflow.py run \
   --question "Quelles garanties le workflow propose-t-il ?" \
   --dry-run --out artifacts/demo
 ```
+
+## Branche rapide par le terminal
+
+Après avoir constitué un fichier réel `data/sources.jsonl` :
+
+```bash
+bash start.sh data/sources.jsonl
+```
+
+Le lanceur propose les modèles Ollama installés, demande le nom exact du
+modèle et la question, puis écrit un dossier de revue horodaté. Il ne permet
+pas de transfert à une API distante.
 
 ## Brancher une IA locale (aucun compte externe nécessaire)
 
